@@ -4,6 +4,8 @@
     <option name="projectPerEditor">
       <map>
         <entry key="SpeleoLogViewer/App.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
+        <entry key="SpeleoLogViewer/Views/Documents/FileView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
+        <entry key="SpeleoLogViewer/Views/Documents/LogView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
         <entry key="SpeleoLogViewer/Views/MainWindow.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
       </map>
     </option>

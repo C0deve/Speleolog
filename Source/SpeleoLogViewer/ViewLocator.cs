@@ -1,32 +1,31 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Dock.Model.Core;
 using SpeleoLogViewer.ViewModels;
 
 namespace SpeleoLogViewer;
 
 public class ViewLocator : IDataTemplate
 {
-    public Control? Build(object? data)
+    public Control Build(object? data)
     {
-        if (data is null)
-            return null;
-
-        var name = data.GetType().FullName!.Replace("ViewModel", "View", StringComparison.Ordinal);
+        var name = data?.GetType().FullName?.Replace("ViewModel", "View");
+        if (name is null)
+            return new TextBlock { Text = "Invalid Data Type" };
+        
         var type = Type.GetType(name);
+        if (type is null) 
+            return new TextBlock { Text = "Not Found: " + name };
+        
+        var instance = Activator.CreateInstance(type);
+        if (instance is not null)
+            return (Control)instance;
 
-        if (type != null)
-        {
-            var control = (Control)Activator.CreateInstance(type)!;
-            control.DataContext = data;
-            return control;
-        }
+        return new TextBlock { Text = "Create Instance Failed: " + type.FullName };
 
-        return new TextBlock { Text = "Not Found: " + name };
     }
 
-    public bool Match(object? data)
-    {
-        return data is ViewModelBase;
-    }
+    public bool Match(object? data) => data is ObservableObject or IDockable;
 }

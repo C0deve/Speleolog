@@ -1,22 +1,36 @@
 ﻿using System;
 using System.IO;
-using System.Reactive;
 using System.Reactive.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+using Dock.Model.Controls;
+using Dock.Model.Core;
 using SpeleoLogViewer.Service;
 
 namespace SpeleoLogViewer.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase
+public partial class MainWindowViewModel : ViewModelBase, IDropTarget
 {
+    private readonly NotepadFactory _factory;
+
+    [ObservableProperty] private IRootDock? _layout;
     [ObservableProperty] private string? _fileText;
+
+    public MainWindowViewModel()
+    {
+        _factory = new NotepadFactory();
+        Layout = _factory.CreateLayout();
+        if (Layout is not null)
+        {
+            _factory.InitLayout(Layout);
+        }
+    }
+
 
     [RelayCommand]
     private async Task OpenFile(CancellationToken token)
@@ -27,34 +41,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var file = await DoOpenFilePickerAsync();
             if (file is null) return;
 
-            FileSystemObserver
-                .Observe(file.Path.AbsolutePath)
-                .SelectMany(fileSystemEventArgs => GetFileProvider().TryGetFileFromPathAsync(fileSystemEventArgs.FullPath))
-                .StartWith(file)
-                .Where(storageFile => storageFile is not null)
-                .Select(storageFile => storageFile!)
-                .SelectMany(storageFile => Observable.FromAsync(async () =>
-                {
-                    try
-                    {
-                        // Limit the text file to 1MB so that the demo won't lag.
-                        if ((await storageFile.GetBasicPropertiesAsync()).Size <= 1024 * 1024 * 1)
-                        {
-                            await using var readStream = await file.OpenReadAsync();
-                            using var reader = new StreamReader(readStream);
-                            FileText = await reader.ReadToEndAsync(token);
-                        }
-                        else
-                        {
-                            throw new Exception("File exceeded 1MB limit.");
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        ErrorMessages?.Add(e.Message);
-                    }
-                }))
-                .Subscribe();
+            AddFileViewModel(await OpenFileViewModel(file, CancellationToken.None));
         }
         catch (Exception e)
         {
@@ -75,11 +62,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var files = await provider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open Text File",
+            Title = "Open AllLines File",
             AllowMultiple = false
         });
 
-        return files?.Count >= 1 ? files[0] : null;
+        return files.Count >= 1 ? files[0] : null;
     }
 
     private static IStorageProvider GetFileProvider()
@@ -87,7 +74,63 @@ public partial class MainWindowViewModel : ViewModelBase
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
             desktop.MainWindow?.StorageProvider is not { } provider)
             throw new NullReferenceException("Missing StorageProvider instance.");
-        
+
         return provider;
+    }
+
+    private static async Task<LogViewModel> OpenFileViewModel(IStorageItem storageFile, CancellationToken token)
+    {
+        // Limit the text file to 1MB so that the demo won't lag.
+        if (!((await storageFile.GetBasicPropertiesAsync()).Size <= 1024 * 1024 * 1)) throw new Exception("File exceeded 1MB limit.");
+
+        var path = storageFile.Path.AbsolutePath;
+        return new LogViewModel(
+            path,
+            FileSystemObserver.FileSystemWatcherFactory,
+            File.ReadAllLinesAsync
+        );
+    }
+    
+    private void AddFileViewModel(LogViewModel logViewModel)
+    {
+        var files = _factory.GetDockable<IDocumentDock>("Files");
+        if (Layout is null || files is null) return;
+
+        _factory.AddDockable(files, logViewModel);
+        _factory.SetActiveDockable(logViewModel);
+        _factory.SetFocusedDockable(Layout, logViewModel);
+    }
+
+    public void CloseLayout()
+    {
+        if (Layout is not IDock dock) return;
+        if (dock.Close.CanExecute(null))
+        {
+            dock.Close.Execute(null);
+        }
+    }
+
+    public void DragOver(object? sender, DragEventArgs e)
+    {
+        if (e.Data.Contains(DataFormats.Files)) return;
+        e.DragEffects = DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    public async Task Drop(object? sender, DragEventArgs e)
+    {
+        if (!e.Data.Contains(DataFormats.Files)) return;
+        var result = e.Data.GetFiles();
+        if (result is not null)
+        {
+            foreach (var item in result)
+            {
+                if (item is not IStorageFile storageFile) continue;
+                var openFileViewModel = await OpenFileViewModel(storageFile, CancellationToken.None);
+                AddFileViewModel(openFileViewModel);
+            }
+        }
+
+        e.Handled = true;
     }
 }

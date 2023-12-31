@@ -24,5 +24,18 @@
         <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.6" />
         <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.5"/>
 		 <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.0"/>
+        
+        <!--Dock layout-->
+        <PackageReference Include="Dock.Avalonia" Version="11.0.0.5" />
+        <PackageReference Include="Dock.Model" Version="11.0.0.5" />
+        <PackageReference Include="Dock.Model.Mvvm" Version="11.0.0.5" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+      <Compile Update="Views\LogView.axaml.cs">
+        <DependentUpon>LogView.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
     </ItemGroup>
 </Project>

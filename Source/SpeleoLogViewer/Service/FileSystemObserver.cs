@@ -6,26 +6,15 @@ namespace SpeleoLogViewer.Service;
 
 public static class FileSystemObserver
 {
-    public static IObservable<FileSystemEventArgs> Observe(string file) =>
+    public static IObservable<FileSystemEventArgs> Observe(string file, Func<string, IFileSystemWatcher> fileSystemWatcherFactory) =>
         // Observable.Defer enables us to avoid doing any work
         // until we have a subscriber.
-        Observable.Defer(() =>
-            {
-                var directoryName = Path.GetDirectoryName(file) ?? throw new ApplicationException($"Impossible de trouver le repertoir du fichier {file}");
-                var fileName = Path.GetFileName(file);
-                FileSystemWatcher fsw = new(directoryName,fileName);
-                fsw.EnableRaisingEvents = true;
-                return Observable.Return(fsw);
-            })
+        Observable.Defer(() => Observable.Return(fileSystemWatcherFactory(file)))
             .SelectMany(fsw =>
                 Observable.Merge(new[]
                     {
                         Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
-                            h => fsw.Created += h, h => fsw.Created -= h),
-                        Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
                             h => fsw.Changed += h, h => fsw.Changed -= h),
-                        Observable.FromEventPattern<RenamedEventHandler, FileSystemEventArgs>(
-                            h => fsw.Renamed += h, h => fsw.Renamed -= h),
                         Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
                             h => fsw.Deleted += h, h => fsw.Deleted -= h)
                     })
@@ -41,4 +30,12 @@ public static class FileSystemObserver
             // but that it gets shut down if all subscribers unsubscribe.
             .Publish()
             .RefCount();
+
+    public static IFileSystemWatcher FileSystemWatcherFactory(string file)
+    {
+        var directoryName = Path.GetDirectoryName(file) ?? throw new ApplicationException($"Impossible de trouver le repertoir du fichier {file}");
+        FileSystemWatcher fsw = new(directoryName);
+        fsw.EnableRaisingEvents = true;
+        return new FileSystemWatcherWrapper(fsw);
+    }
 }
