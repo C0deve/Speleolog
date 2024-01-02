@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -41,7 +40,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
             var file = await DoOpenFilePickerAsync();
             if (file is null) return;
 
-            AddFileViewModel(await OpenFileViewModel(file, CancellationToken.None));
+            AddFileViewModel(OpenFileViewModel(file));
         }
         catch (Exception e)
         {
@@ -78,11 +77,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
         return provider;
     }
 
-    private static async Task<LogViewModel> OpenFileViewModel(IStorageItem storageFile, CancellationToken token)
+    private static LogViewModel OpenFileViewModel(IStorageItem storageFile)
     {
-        // Limit the text file to 1MB so that the demo won't lag.
-        if (!((await storageFile.GetBasicPropertiesAsync()).Size <= 1024 * 1024 * 1)) throw new Exception("File exceeded 1MB limit.");
-
         var path = storageFile.Path.LocalPath;
         var directory = Path.GetDirectoryName(path) ?? throw new InvalidOperationException($"Impossible de trouver le repertoir du fichier {path}");
         return new LogViewModel(
@@ -118,7 +114,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
         e.Handled = true;
     }
 
-    public async Task Drop(object? sender, DragEventArgs e)
+    public void Drop(object? sender, DragEventArgs e)
     {
         if (!e.Data.Contains(DataFormats.Files)) return;
         var result = e.Data.GetFiles();
@@ -127,7 +123,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
             foreach (var item in result)
             {
                 if (item is not IStorageFile storageFile) continue;
-                var openFileViewModel = await OpenFileViewModel(storageFile, CancellationToken.None);
+                var openFileViewModel = OpenFileViewModel(storageFile);
                 AddFileViewModel(openFileViewModel);
             }
         }
