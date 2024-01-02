@@ -6,18 +6,18 @@ namespace SpeleoLogViewer.Service;
 
 public static class FileSystemObserver
 {
-    public static IObservable<FileSystemEventArgs> Observe(string file, Func<string, IFileSystemWatcher> fileSystemWatcherFactory) =>
+    public static IObservable<FileSystemEventArgs> ObserveFolder(string folderPath, Func<string, IFileSystemWatcher> fileSystemWatcherFactory) =>
         // Observable.Defer enables us to avoid doing any work
         // until we have a subscriber.
-        Observable.Defer(() => Observable.Return(fileSystemWatcherFactory(file)))
+        Observable
+            .Defer(() => Observable.Return(fileSystemWatcherFactory(folderPath)))
             .SelectMany(fsw =>
-                Observable.Merge(new[]
-                    {
+                Observable.Merge([
                         Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
                             h => fsw.Changed += h, h => fsw.Changed -= h),
                         Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
                             h => fsw.Deleted += h, h => fsw.Deleted -= h)
-                    })
+                    ])
                     // FromEventPattern supplies both the sender and the event
                     // args. Extract just the latter.
                     .Select(ep => ep.EventArgs)
@@ -31,10 +31,9 @@ public static class FileSystemObserver
             .Publish()
             .RefCount();
 
-    public static IFileSystemWatcher FileSystemWatcherFactory(string file)
+    public static IFileSystemWatcher FileSystemWatcherFactory(string directoryPath)
     {
-        var directoryName = Path.GetDirectoryName(file) ?? throw new ApplicationException($"Impossible de trouver le repertoir du fichier {file}");
-        FileSystemWatcher fsw = new(directoryName);
+        FileSystemWatcher fsw = new(directoryPath);
         fsw.EnableRaisingEvents = true;
         return new FileSystemWatcherWrapper(fsw);
     }

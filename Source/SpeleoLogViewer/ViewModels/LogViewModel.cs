@@ -7,7 +7,6 @@ using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dock.Model.Mvvm.Controls;
-using SpeleoLogViewer.Service;
 
 namespace SpeleoLogViewer.ViewModels;
 
@@ -19,13 +18,12 @@ public sealed class LogViewModel : Document, IDisposable
     public ObservableCollection<string> AllLines { get; } = [];
 
     /// <inheritdoc/>
-    public LogViewModel(string path, Func<string, IFileSystemWatcher> fileChangedStream, Func<string, CancellationToken, Task<string[]>> getTextAsync)
+    public LogViewModel(string path, IObservable<FileSystemEventArgs> fileChangedStream, Func<string, CancellationToken, Task<string[]>> getTextAsync)
     {
         Path = path;
         Title = System.IO.Path.GetFileName(Path);
 
-        FileSystemObserver
-            .Observe(path, fileChangedStream)
+        fileChangedStream
             .Where(args => args.Name == Title)
             .Select(_ => Unit.Default)
             .StartWith(Unit.Default)

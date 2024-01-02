@@ -7,7 +7,7 @@ var directoryName = Path.GetDirectoryName(file) ?? throw new ApplicationExceptio
 var fileName = Path.GetFileName(file);
 FileSystemWatcher fsw = new(directoryName, fileName);
 fsw.EnableRaisingEvents = true;
-fsw.NotifyFilter = NotifyFilters.LastWrite;
+fsw.NotifyFilter = NotifyFilters.LastWrite; 
 fsw.IncludeSubdirectories = false;
-fsw.Changed += (_, eventArgs) => {Console.WriteLine($"{_.GetType()}{eventArgs.Name} {eventArgs.ChangeType}");};
+fsw.Changed += (o, eventArgs) => {Console.WriteLine($"{o.GetType()}{eventArgs.Name} {eventArgs.ChangeType}");};
 Console.ReadLine();

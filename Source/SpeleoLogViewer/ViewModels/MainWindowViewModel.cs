@@ -83,14 +83,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
         // Limit the text file to 1MB so that the demo won't lag.
         if (!((await storageFile.GetBasicPropertiesAsync()).Size <= 1024 * 1024 * 1)) throw new Exception("File exceeded 1MB limit.");
 
-        var path = storageFile.Path.AbsolutePath;
+        var path = storageFile.Path.LocalPath;
+        var directory = Path.GetDirectoryName(path) ?? throw new InvalidOperationException($"Impossible de trouver le repertoir du fichier {path}");
         return new LogViewModel(
             path,
-            FileSystemObserver.FileSystemWatcherFactory,
+            FileSystemObserver.ObserveFolder(directory, FileSystemObserver.FileSystemWatcherFactory),
             File.ReadAllLinesAsync
         );
     }
-    
+
     private void AddFileViewModel(LogViewModel logViewModel)
     {
         var files = _factory.GetDockable<IDocumentDock>("Files");
