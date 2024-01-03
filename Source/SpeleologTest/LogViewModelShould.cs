@@ -29,7 +29,7 @@ public class LogViewModelShould
         var emitter = new Subject<FileSystemEventArgs>();
         using var sut = new LogViewModel("", emitter.AsObservable(), GetTextAsync());
 
-        sut.AllLines.ShouldBe(lines.Reverse());
+        sut.AllLines.ShouldBe(lines.Select(s => new LogLineViewModel(s)).Reverse());
         return;
 
         Func<string, CancellationToken, Task<string[]>> GetTextAsync() =>
@@ -46,12 +46,12 @@ public class LogViewModelShould
         using var sut = new LogViewModel(@"path\log.txt", emitter.AsObservable(), GetTextAsync);
 
         await Task.Delay(TimeSpan.FromMilliseconds(10));
-        sut.AllLines.ShouldBe(lines.Reverse());
+        sut.AllLines.ShouldBe(lines.Reverse().Select(s => new LogLineViewModel(s)));
         
         emitter.OnNext(new FileSystemEventArgs(WatcherChangeTypes.Changed, "path", "log.txt"));
 
         await Task.Delay(TimeSpan.FromMilliseconds(10));
-        sut.AllLines.ShouldBe(linesEvolution.Reverse());
+        sut.AllLines.ShouldBe(linesEvolution.Reverse().Select(s => new LogLineViewModel(s)));
         return;
 
         Task<string[]> GetTextAsync(string path, CancellationToken token)
@@ -78,7 +78,7 @@ public class LogViewModelShould
 
         emitter.OnNext(new FileSystemEventArgs(WatcherChangeTypes.Changed, "path", "log2.txt"));
 
-        sut.AllLines.ShouldBe(lines.Reverse());
+        sut.AllLines.ShouldBe(lines.Select(s => new LogLineViewModel(s)).Reverse());
         return;
 
         Task<string[]> GetTextAsync(string path, CancellationToken token)

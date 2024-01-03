@@ -15,11 +15,12 @@ public sealed class LogViewModel : Document, IDisposable
     private readonly CompositeDisposable _disposables = new();
     public string Path { get; }
 
-    public ObservableCollection<string> AllLines { get; } = [];
+    public ObservableCollection<LogLineViewModel> AllLines { get; } = [];
 
     /// <inheritdoc/>
     public LogViewModel(string path, IObservable<FileSystemEventArgs> fileChangedStream, Func<string, CancellationToken, Task<string[]>> getTextAsync)
     {
+        var first = true;
         Path = path;
         Title = System.IO.Path.GetFileName(Path);
 
@@ -31,10 +32,11 @@ public sealed class LogViewModel : Document, IDisposable
             .ObserveOn(SynchronizationContext.Current ?? throw new InvalidOperationException())
             .Do(strings =>
             {
-                for (var i = AllLines.Count; i < strings.Length; i++)
-                {
-                    AllLines.Insert(0, strings[i]);
-                }
+                for (var i = AllLines.Count; i < strings.Length; i++) 
+                    AllLines.Insert(0, new LogLineViewModel(strings[i], !first));
+
+                if (first) 
+                    first = false;
             })
             .Subscribe()
             .DisposeWith(_disposables);
