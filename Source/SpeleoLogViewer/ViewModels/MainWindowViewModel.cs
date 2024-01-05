@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -9,6 +12,8 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Controls;
 using Dock.Model.Core;
+using ReactiveUI;
+using SpeleoLogViewer.Models;
 using SpeleoLogViewer.Service;
 
 namespace SpeleoLogViewer.ViewModels;
@@ -19,15 +24,35 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
 
     [ObservableProperty] private IRootDock? _layout;
     [ObservableProperty] private string? _fileText;
+    private readonly List<string> _openFiles = [];
+
+    public IEnumerable<string> OpenFiles => _openFiles.AsEnumerable();
 
     public MainWindowViewModel()
     {
         _factory = new NotepadFactory();
         Layout = _factory.CreateLayout();
-        if (Layout is not null)
-        {
-            _factory.InitLayout(Layout);
-        }
+        if (Layout is not null) _factory.InitLayout(Layout);
+
+        Observable
+            .FromAsync(SpeleologStateRepository.GetAsync)
+            .WhereNotNull()
+            .ObserveOn(SynchronizationContext.Current ?? throw new InvalidOperationException())
+            .Do(state =>
+            {
+                foreach (var filePath in state.LastOpenFiles)
+                {
+                    try
+                    {
+                        AddFileViewModel(OpenFileViewModel(filePath));
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                }
+            })
+            .Subscribe();
     }
 
 
@@ -40,7 +65,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
             var file = await DoOpenFilePickerAsync();
             if (file is null) return;
 
-            AddFileViewModel(OpenFileViewModel(file));
+            AddFileViewModel(OpenFileViewModel(file.Path.LocalPath));
         }
         catch (Exception e)
         {
@@ -77,9 +102,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
         return provider;
     }
 
-    private static LogViewModel OpenFileViewModel(IStorageItem storageFile)
+    private LogViewModel OpenFileViewModel(string path)
     {
-        var path = storageFile.Path.LocalPath;
+        _openFiles.Add(path);
         var directory = Path.GetDirectoryName(path) ?? throw new InvalidOperationException($"Impossible de trouver le repertoir du fichier {path}");
         return new LogViewModel(
             path,
@@ -123,7 +148,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
             foreach (var item in result)
             {
                 if (item is not IStorageFile storageFile) continue;
-                var openFileViewModel = OpenFileViewModel(storageFile);
+                var openFileViewModel = OpenFileViewModel(storageFile.Path.LocalPath);
                 AddFileViewModel(openFileViewModel);
             }
         }

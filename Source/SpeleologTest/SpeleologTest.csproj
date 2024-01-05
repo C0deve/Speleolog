@@ -27,4 +27,10 @@
       <ProjectReference Include="..\SpeleoLogViewer\SpeleoLogViewer.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="Speleolog.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>
