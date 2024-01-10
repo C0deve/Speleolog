@@ -6,24 +6,26 @@
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <Platforms>AnyCPU;x64</Platforms>
     </PropertyGroup>
 
     <ItemGroup>
-        <Folder Include="Models\"/>
-        <AvaloniaResource Include="Assets\**"/>
+        <Folder Include="Models\" />
+        <AvaloniaResource Include="Assets\**" />
     </ItemGroup>
 
 
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.0.6" />
+        <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="11.0.6" />
         <PackageReference Include="Avalonia.Desktop" Version="11.0.6" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.6" />
         <PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.6" />
         <PackageReference Include="Avalonia.Markup.Xaml.Loader" Version="11.0.6" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
         <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.6" />
-        <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.5"/>
-		 <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.0"/>
+        <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.5" />
+		 <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.0" />
         
         <!--Dock layout-->
         <PackageReference Include="Dock.Avalonia" Version="11.0.0.5" />

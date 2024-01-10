@@ -7,7 +7,7 @@ namespace SpeleoLogViewer.ViewModels;
 public partial class LogLineViewModel : ViewModelBase
 {
     public string Text { get; }
-    public bool IsError => Text == "error";
+    public bool IsError => Text.Contains("error", StringComparison.InvariantCultureIgnoreCase);
     [ObservableProperty] private bool _justAppend;
 
     /// <inheritdoc/>
