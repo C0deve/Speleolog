@@ -14,13 +14,13 @@ using Dock.Model.Controls;
 using Dock.Model.Core;
 using ReactiveUI;
 using SpeleoLogViewer.Models;
-using SpeleoLogViewer.Service;
 
 namespace SpeleoLogViewer.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase, IDropTarget
 {
     private readonly NotepadFactory _factory;
+    private readonly FileObserverProvider _fileObserverProvider;
 
     [ObservableProperty] private IRootDock? _layout;
     [ObservableProperty] private string? _fileText;
@@ -34,6 +34,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
         Layout = _factory.CreateLayout();
         if (Layout is not null) _factory.InitLayout(Layout);
 
+        _fileObserverProvider = new FileObserverProvider();
+
+        // Load state from last application use
         Observable
             .FromAsync(SpeleologStateRepository.GetAsync)
             .WhereNotNull()
@@ -62,10 +65,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
         ErrorMessages?.Clear();
         try
         {
-            var file = await DoOpenFilePickerAsync();
-            if (file is null) return;
-
-            AddFileViewModel(OpenFileViewModel(file.Path.LocalPath));
+            var files = await DoOpenFilePickerAsync();
+            foreach (var file in files)
+                AddFileViewModel(OpenFileViewModel(file.Path.LocalPath));
         }
         catch (Exception e)
         {
@@ -73,25 +75,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
         }
     }
 
-    private static async Task<IStorageFile?> DoOpenFilePickerAsync()
-    {
-        // For learning purposes, we opted to directly get the reference
-        // for StorageProvider APIs here inside the ViewModel. 
-
-        // For your real-world apps, you should follow the MVVM principles
-        // by making service classes and locating them with DI/IoC.
-
-        // See IoCFileOps project for an example of how to accomplish this.
-        var provider = GetFileProvider();
-
-        var files = await provider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "Open AllLines File",
-            AllowMultiple = false
-        });
-
-        return files.Count >= 1 ? files[0] : null;
-    }
+    private static Task<IReadOnlyList<IStorageFile>> DoOpenFilePickerAsync() =>
+        GetFileProvider()
+            .OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Open AllLines File",
+                AllowMultiple = true
+            });
 
     private static IStorageProvider GetFileProvider()
     {
@@ -102,19 +92,27 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
         return provider;
     }
 
-    private LogViewModel OpenFileViewModel(string path)
+    private LogViewModel? OpenFileViewModel(string path)
     {
+        if (!Path.Exists(path))
+        {
+            Console.WriteLine($"Le fichier {path} n''existe pas.");
+            return null;
+        }
+
         _openFiles.Add(path);
-        var directory = Path.GetDirectoryName(path) ?? throw new InvalidOperationException($"Impossible de trouver le repertoir du fichier {path}");
+
         return new LogViewModel(
             path,
-            FileSystemObserver.ObserveFolder(directory, FileSystemObserver.FileSystemWatcherFactory),
+            _fileObserverProvider.GetObservable(path),
             File.ReadAllLinesAsync
         );
     }
 
-    private void AddFileViewModel(LogViewModel logViewModel)
+    private void AddFileViewModel(LogViewModel? logViewModel)
     {
+        if (logViewModel is null) return;
+
         var files = _factory.GetDockable<IDocumentDock>("Files");
         if (Layout is null || files is null) return;
 
