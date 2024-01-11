@@ -8,7 +8,7 @@ using Dock.Model.Mvvm.Controls;
 
 namespace SpeleoLogViewer.ViewModels;
 
-public class NotepadFactory : Factory
+public class DockFactory : Factory
 {
     private IRootDock? _rootDock;
     private IDocumentDock? _documentDock;
@@ -20,7 +20,7 @@ public class NotepadFactory : Factory
             Id = "Files",
             Title = "Files",
             IsCollapsable = false,
-            Proportion = double.NaN,
+            Proportion = 0.5,
             CanCreateDocument = false
         };
         
