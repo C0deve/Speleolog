@@ -18,13 +18,13 @@ public static class SpeleologStateRepository
     {
         if (File.Exists(FilePath)) File.Delete(FilePath); 
         var json = JsonSerializer.Serialize(state, Options);
-        await File.WriteAllTextAsync(FilePath, json, token);
+        await File.WriteAllTextAsync(FilePath, json, token).ConfigureAwait(false);
     }
 
     public static async Task<SpeleologState?> GetAsync(CancellationToken token = default)
     {
         if (!File.Exists(FilePath)) return null;
-        var param = await File.ReadAllTextAsync(FilePath, token);
+        var param = await File.ReadAllTextAsync(FilePath, token).ConfigureAwait(false);
         return JsonSerializer.Deserialize<SpeleologState>(param, Options);
     }
 }

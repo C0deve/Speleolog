@@ -12,7 +12,8 @@ namespace SpeleoLogViewer.ViewModels;
 
 public sealed class LogViewModel : Document, IDisposable
 {
-    private readonly CompositeDisposable _disposables = new();
+    private readonly CompositeDisposable _disposables = [];
+    
     public string Path { get; }
 
     public ObservableCollection<LogLineViewModel> AllLines { get; } = [];
@@ -25,7 +26,7 @@ public sealed class LogViewModel : Document, IDisposable
         Title = System.IO.Path.GetFileName(Path);
 
         fileChangedStream
-            .Where(args => args.Name == Title)
+            .Where(args => string.Equals(args.Name, Title, StringComparison.InvariantCultureIgnoreCase))
             .Select(_ => Unit.Default)
             .StartWith(Unit.Default)
             .SelectMany(_ => Observable.FromAsync(() => getTextAsync(Path, CancellationToken.None)))

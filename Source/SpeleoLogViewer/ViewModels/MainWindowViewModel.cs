@@ -20,6 +20,7 @@ namespace SpeleoLogViewer.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase, IDropTarget
 {
     private readonly NotepadFactory _factory;
+    private readonly DockFactory _factory;
     private readonly FileObserverProvider _fileObserverProvider;
 
     [ObservableProperty] private IRootDock? _layout;
@@ -30,7 +31,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
 
     public MainWindowViewModel()
     {
-        _factory = new NotepadFactory();
+        _factory = new DockFactory();
         Layout = _factory.CreateLayout();
         if (Layout is not null) _factory.InitLayout(Layout);
 
