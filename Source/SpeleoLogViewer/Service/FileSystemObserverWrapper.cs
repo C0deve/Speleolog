@@ -2,11 +2,11 @@
 
 namespace SpeleoLogViewer.Service;
 
-public sealed class FileSystemWatcherWrapper : IFileSystemWatcher
+public sealed class FileSystemObserverWrapper : IFileSystemObserver
 {
     private readonly FileSystemWatcher _fileSystemWatcher;
 
-    public FileSystemWatcherWrapper(FileSystemWatcher fileSystemWatcher)
+    public FileSystemObserverWrapper(FileSystemWatcher fileSystemWatcher)
     {
         _fileSystemWatcher = fileSystemWatcher;
         _fileSystemWatcher.Changed += (sender, args) => Changed?.Invoke(sender, args);

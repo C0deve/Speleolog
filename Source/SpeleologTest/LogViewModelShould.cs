@@ -7,92 +7,44 @@ namespace SpeleologTest;
 
 public class LogViewModelShould
 {
-    [Fact]
-    public void LoadAllLinesAfterInstantiation()
-    {
-        string[] lines = ["A", "B", "C"];
-
-        var emitter = new Subject<FileSystemEventArgs>();
-        using var sut = new LogViewModel("", emitter.AsObservable(), GetTextAsync());
-
-        sut.AllLines.Count.ShouldBe(lines.Length);
-        return;
-
-        Func<string, CancellationToken, Task<string[]>> GetTextAsync() =>
-            (_, _) => Task.FromResult(lines);
-    }
+    private static readonly TimeSpan OperationDelay = TimeSpan.FromMilliseconds(10);
 
     [Fact]
-    public void LoadAllLinesInReverse()
+    public async Task AppendLinesInReverseOnFileChanged()
     {
         string[] lines = ["A", "B", "C"];
-        var emitter = new Subject<FileSystemEventArgs>();
-        using var sut = new LogViewModel("", emitter.AsObservable(), GetTextAsync());
+        var emitter = new Subject<string[]>();
+        using var sut = new LogViewModel("", emitter.AsObservable());
+        
+        emitter.OnNext(lines);
+        await Task.Delay(OperationDelay);
 
         sut.AllLines.Select(lineVM => lineVM.Text).ShouldBe(lines.Reverse());
-
-        return;
-
-        Func<string, CancellationToken, Task<string[]>> GetTextAsync() =>
-            (_, _) => Task.FromResult(lines);
-    }
-
-    [Fact]
-    public async Task AppendLinesOnFileChanged()
-    {
-        var nbCall = 0;
-        string[] lines = ["A", "B", "C"];
-        string[] linesEvolution = ["A", "B", "C", "D", "E"];
-        var emitter = new Subject<FileSystemEventArgs>();
-        using var sut = new LogViewModel(@"path\log.txt", emitter.AsObservable(), GetTextAsync);
-
-        await Task.Delay(TimeSpan.FromMilliseconds(10));
-        sut.AllLines.Select(lineVM => lineVM.Text).ShouldBe(lines.Reverse());
-
-        emitter.OnNext(new FileSystemEventArgs(WatcherChangeTypes.Changed, "path", "log.txt"));
-
-        await Task.Delay(TimeSpan.FromMilliseconds(10));
-        sut.AllLines.Select(lineVM => lineVM.Text).ShouldBe(linesEvolution.Reverse());
-        return;
-
-        Task<string[]> GetTextAsync(string path, CancellationToken token)
-        {
-            // ReSharper disable once InvertIf
-            if (nbCall == 0)
-            {
-                nbCall++;
-                return Task.FromResult(lines);
-            }
-            
-            return Task.FromResult(linesEvolution);
-        }
     }
     
     [Fact]
-    public void AppendLinesOnlyIfFileNameMatch()
+    public async Task FirstAppendLinesAreNotJustAppend()
     {
-        var nbCall = 0;
-        string[] lines = ["A", "B", "C"];
-        string[] linesEvolution = ["A", "B", "C", "D", "E"];
-        var emitter = new Subject<FileSystemEventArgs>();
-        using var sut = new LogViewModel(@"path\log.txt", emitter.AsObservable(), GetTextAsync);
+        var emitter = new Subject<string[]>();
+        using var sut = new LogViewModel("", emitter.AsObservable());
+        
+        emitter.OnNext(["A", "B", "C"]);
+        await Task.Delay(OperationDelay);
 
-        emitter.OnNext(new FileSystemEventArgs(WatcherChangeTypes.Changed, "path", "log2.txt"));
+        sut.AllLines.Any(vm => vm.JustAppend).ShouldBeFalse();
+    }
+    
+    [Fact]
+    public async Task SecondAppendLinesAreJustAppend()
+    {
+        var emitter = new Subject<string[]>();
+        using var sut = new LogViewModel("", emitter.AsObservable());
+        emitter.OnNext(["A", "B", "C"]);
+        await Task.Delay(OperationDelay);
 
-        sut.AllLines.Select(lineVM => lineVM.Text).ShouldBe(lines.Reverse());
 
-        return;
-
-        Task<string[]> GetTextAsync(string path, CancellationToken token)
-        {
-            // ReSharper disable once InvertIf
-            if (nbCall == 0)
-            {
-                nbCall++;
-                return Task.FromResult(lines);
-            }
-            
-            return Task.FromResult(linesEvolution);
-        }
+        emitter.OnNext(["A", "B", "C", "D", "E"]);
+        await Task.Delay(OperationDelay);
+        sut.AllLines.Take(2).All(vm => vm.JustAppend).ShouldBeTrue();
     }
 }

@@ -59,12 +59,13 @@
                         </Grid>
                     </DataTemplate>
                 </ItemsRepeater.ItemTemplate>
-            </ItemsRepeater></ScrollViewer>
+            </ItemsRepeater>
+        </ScrollViewer>
         <Grid ColumnDefinitions="*,Auto" Grid.Row="1">
             <TextBlock
                 Grid.Column="0"
                 Margin="2"
-                Text="{Binding Path}"
+                Text="{Binding FilePath}"
                 TextWrapping="Wrap"
                 VerticalAlignment="Center" />
         </Grid>
