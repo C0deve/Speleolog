@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,14 +12,18 @@ using Dock.Model.Controls;
 using Dock.Model.Core;
 using ReactiveUI;
 using SpeleoLogViewer.Models;
+using SpeleoLogViewer.Service;
 
 namespace SpeleoLogViewer.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase, IDropTarget
+public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, IDisposable
 {
-    private readonly NotepadFactory _factory;
+    private readonly CompositeDisposable _disposables = [];
+
+    private readonly IStorageProvider _storageProvider;
+    private readonly Func<string, CancellationToken, Task<string[]>> _getTextAsync;
     private readonly DockFactory _factory;
-    private readonly FileObserverProvider _fileObserverProvider;
+    private readonly FileContentObserverProvider _fileContentObserverProvider;
 
     [ObservableProperty] private IRootDock? _layout;
     [ObservableProperty] private string? _fileText;
@@ -29,13 +31,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
 
     public IEnumerable<string> OpenFiles => _openFiles.AsEnumerable();
 
-    public MainWindowViewModel()
+    public MainWindowViewModel(IStorageProvider storageProvider, Func<string, CancellationToken, Task<string[]>> getTextAsync, Func<string,IFileSystemObserver> fileSystemObserverFactory)
     {
+        _storageProvider = storageProvider;
+        _getTextAsync = getTextAsync;
         _factory = new DockFactory();
         Layout = _factory.CreateLayout();
         if (Layout is not null) _factory.InitLayout(Layout);
 
-        _fileObserverProvider = new FileObserverProvider();
+        _fileContentObserverProvider = new FileContentObserverProvider(fileSystemObserverFactory);
 
         // Load state from last application use
         Observable
@@ -56,7 +60,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
                     }
                 }
             })
-            .Subscribe();
+            .Subscribe()
+            .DisposeWith(_disposables);
     }
 
 
@@ -76,38 +81,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
         }
     }
 
-    private static Task<IReadOnlyList<IStorageFile>> DoOpenFilePickerAsync() =>
-        GetFileProvider()
+    private Task<IReadOnlyList<IStorageFile>> DoOpenFilePickerAsync() =>
+        _storageProvider
             .OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Open AllLines File",
                 AllowMultiple = true
             });
 
-    private static IStorageProvider GetFileProvider()
-    {
-        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
-            desktop.MainWindow?.StorageProvider is not { } provider)
-            throw new NullReferenceException("Missing StorageProvider instance.");
-
-        return provider;
-    }
-
     private LogViewModel? OpenFileViewModel(string path)
     {
-        if (!Path.Exists(path))
-        {
-            Console.WriteLine($"Le fichier {path} n''existe pas.");
-            return null;
-        }
-
         _openFiles.Add(path);
 
         return new LogViewModel(
             path,
-            _fileObserverProvider.GetObservable(path),
-            File.ReadAllLinesAsync
-        );
+            _fileContentObserverProvider.GetObservable(path, _getTextAsync));
     }
 
     private void AddFileViewModel(LogViewModel? logViewModel)
@@ -153,5 +141,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDropTarget
         }
 
         e.Handled = true;
+    }
+    
+    public void Dispose()
+    {
+        _disposables.Dispose();
     }
 }

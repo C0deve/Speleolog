@@ -6,7 +6,7 @@ namespace SpeleoLogViewer.Service;
 
 public static class FileSystemObserver
 {
-    public static IObservable<FileSystemEventArgs> ObserveFolder(string folderPath, Func<string, IFileSystemWatcher> fileSystemWatcherFactory) =>
+    public static IObservable<FileSystemEventArgs> ObserveFolder(string folderPath, Func<string, IFileSystemObserver> fileSystemWatcherFactory) =>
         // Observable.Defer enables us to avoid doing any work
         // until we have a subscriber.
         Observable
@@ -30,11 +30,4 @@ public static class FileSystemObserver
             // but that it gets shut down if all subscribers unsubscribe.
             .Publish()
             .RefCount();
-
-    public static IFileSystemWatcher FileSystemWatcherFactory(string directoryPath)
-    {
-        FileSystemWatcher fsw = new(directoryPath);
-        fsw.EnableRaisingEvents = true;
-        return new FileSystemWatcherWrapper(fsw);
-    }
 }

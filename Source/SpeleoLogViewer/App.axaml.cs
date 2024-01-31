@@ -3,7 +3,6 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using SpeleoLogViewer.Models;
-using SpeleoLogViewer.ViewModels;
 using SpeleoLogViewer.Views;
 
 namespace SpeleoLogViewer;
@@ -19,19 +18,16 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var mainWindowViewModel = new MainWindowViewModel();
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = mainWindowViewModel
-            };
+            var desktopMainWindow = new MainWindow();
+            desktop.MainWindow = desktopMainWindow;
 
             desktop.MainWindow.Closing += (_, _) =>
             {
-                var state = new SpeleologState(mainWindowViewModel.OpenFiles.ToList());
+                var state = new SpeleologState((desktopMainWindow.ViewModel?.OpenFiles ?? Enumerable.Empty<string>()).ToList());
                 SpeleologStateRepository.SaveAsync(state);
-                mainWindowViewModel.CloseLayout();
+                desktopMainWindow.ViewModel?.CloseLayout();
             };
-            desktop.Exit += (_, _) => { mainWindowViewModel.CloseLayout(); };
+            desktop.Exit += (_, _) => { desktopMainWindow.ViewModel?.CloseLayout(); };
         }
 
         base.OnFrameworkInitializationCompleted();
