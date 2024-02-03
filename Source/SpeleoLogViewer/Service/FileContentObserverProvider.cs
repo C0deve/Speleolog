@@ -23,7 +23,8 @@ public class FileContentObserverProvider(Func<string, IFileSystemObserver> fileS
             .Where(args => string.Equals(args.Name, fileName, StringComparison.InvariantCultureIgnoreCase))
             .Select(_ => Unit.Default)
             .StartWith(Unit.Default)
-            .SelectMany(_ => Observable.FromAsync(() => getTextAsync(filePath, CancellationToken.None)));
+            .Select(_ => Observable.FromAsync(() => getTextAsync(filePath, CancellationToken.None)))
+            .Concat();
     }
 
     private IObservable<FileSystemEventArgs> GetDirectoryChangedObservable(string directoryPath)

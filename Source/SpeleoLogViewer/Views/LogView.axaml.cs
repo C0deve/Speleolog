@@ -14,4 +14,9 @@ public partial class LogView : UserControl
     {
         AvaloniaXamlLoader.Load(this);
     }
+    
+    private void ItemsRepeater_OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (e.HeightChanged) this.FindControl<ScrollViewer>("Scroll")?.ScrollToEnd();
+    }
 }
