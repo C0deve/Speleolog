@@ -1,10 +1,12 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using SpeleoLogViewer.ViewModels;
 
 namespace SpeleoLogViewer.Views;
 
 public partial class LogView : UserControl
 {
+    private LogViewModel? ViewModel => DataContext as LogViewModel;
     public LogView()
     {
         InitializeComponent();
@@ -17,6 +19,7 @@ public partial class LogView : UserControl
     
     private void ItemsRepeater_OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
-        if (e.HeightChanged) this.FindControl<ScrollViewer>("Scroll")?.ScrollToEnd();
+        if ((ViewModel?.AppendFromBottom ?? true) && e.HeightChanged) 
+            this.FindControl<ScrollViewer>("Scroll")?.ScrollToEnd();
     }
 }

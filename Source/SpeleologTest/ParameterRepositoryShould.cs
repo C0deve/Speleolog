@@ -22,12 +22,23 @@ public class ParameterRepositoryShould
             .Count
             .ShouldBe(1);
     }
+    
+    [Fact]
+    public async Task ReadFileV2()
+    {
+        var param = await File.ReadAllTextAsync("Speleologv2.json");
+        JsonSerializer
+            .Deserialize<SpeleologState>(param, Options)
+            .ShouldNotBeNull()
+            .AppendFromBottom
+            .ShouldBeTrue();
+    }
 
     [Fact]
     public async Task WriteReadFile()
     {
         List<string> lastOpenFiles = ["log.txt", "log2.txt"];
-        var expectedState = new SpeleologState(lastOpenFiles);
+        var expectedState = new SpeleologState(lastOpenFiles, false);
 
         await SpeleologStateRepository.SaveAsync(expectedState);
 

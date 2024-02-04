@@ -21,7 +21,7 @@ public static class FileSystemObserver
                     // FromEventPattern supplies both the sender and the event
                     // args. Extract just the latter.
                     .Select(ep => ep.EventArgs)
-                    .Throttle(TimeSpan.FromMilliseconds(200))
+                    .Throttle(TimeSpan.FromMilliseconds(500))
                     // The Finally here ensures the watcher gets shut down once
                     // we have no subscribers.
                     .Finally(fsw.Dispose))

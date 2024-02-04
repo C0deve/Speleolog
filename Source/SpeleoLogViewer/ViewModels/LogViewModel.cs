@@ -13,10 +13,12 @@ public sealed class LogViewModel : Document, IDisposable
 
     public string FilePath { get; }
 
+    public bool AppendFromBottom { get; }
+
     public ObservableCollection<LogLineViewModel> AllLines { get; } = [];
 
     /// <inheritdoc/>
-    public LogViewModel(string filePath, IObservable<string[]> fileChangedStream)
+    public LogViewModel(string filePath, IObservable<string[]> fileChangedStream, bool appendFromBottom)
     {
         FilePath = filePath;
         Title = System.IO.Path.GetFileName(FilePath);
@@ -33,10 +35,17 @@ public sealed class LogViewModel : Document, IDisposable
         
         firstLines
             .Merge(justAppend)
-            //.Do(lineVM => AllLines.Insert(0, lineVM))
-            .Do(lineVM => AllLines.Add(lineVM))
+            .Do(lineVM =>
+            {
+                if(AppendFromBottom)
+                    AllLines.Add(lineVM);
+                else
+                    AllLines.Insert(0, lineVM);
+            })
             .Subscribe(_ => { }, exception => Console.WriteLine(exception))
             .DisposeWith(_disposables);
+        
+        AppendFromBottom = appendFromBottom;
     }
 
     public void Dispose() => _disposables.Dispose();

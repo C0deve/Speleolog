@@ -14,7 +14,7 @@ public class LogViewModelShould
     {
         string[] lines = ["A", "B", "C"];
         var emitter = new Subject<string[]>();
-        using var sut = new LogViewModel("", emitter.AsObservable());
+        using var sut = new LogViewModel("", emitter.AsObservable(), false);
         
         emitter.OnNext(lines);
         await Task.Delay(OperationDelay);
@@ -26,7 +26,7 @@ public class LogViewModelShould
     public async Task FirstAppendLinesAreNotJustAppend()
     {
         var emitter = new Subject<string[]>();
-        using var sut = new LogViewModel("", emitter.AsObservable());
+        using var sut = new LogViewModel("", emitter.AsObservable(), true);
         
         emitter.OnNext(["A", "B", "C"]);
         await Task.Delay(OperationDelay);
@@ -38,7 +38,7 @@ public class LogViewModelShould
     public async Task SecondAppendLinesAreJustAppend()
     {
         var emitter = new Subject<string[]>();
-        using var sut = new LogViewModel("", emitter.AsObservable());
+        using var sut = new LogViewModel("", emitter.AsObservable(), false);
         emitter.OnNext(["A", "B", "C"]);
         await Task.Delay(OperationDelay);
 

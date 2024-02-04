@@ -28,10 +28,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
     [ObservableProperty] private IRootDock? _layout;
     [ObservableProperty] private string? _fileText;
     private readonly List<string> _openFiles = [];
+    public bool AppendFromBottom { get; private set; }
 
     public IEnumerable<string> OpenFiles => _openFiles.AsEnumerable();
 
-    public MainWindowViewModel(IStorageProvider storageProvider, Func<string, CancellationToken, Task<string[]>> getTextAsync, Func<string,IFileSystemObserver> fileSystemObserverFactory)
+    public MainWindowViewModel(
+        IStorageProvider storageProvider, 
+        Func<string, CancellationToken, Task<string[]>> getTextAsync,
+        Func<string, IFileSystemObserver> fileSystemObserverFactory)
     {
         _storageProvider = storageProvider;
         _getTextAsync = getTextAsync;
@@ -48,6 +52,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
             .ObserveOn(SynchronizationContext.Current ?? throw new InvalidOperationException())
             .Do(state =>
             {
+                AppendFromBottom = state.AppendFromBottom;
+                
                 foreach (var filePath in state.LastOpenFiles)
                 {
                     try
@@ -94,8 +100,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
         _openFiles.Add(path);
 
         return new LogViewModel(
-            path,
-            _fileContentObserverProvider.GetObservable(path, _getTextAsync));
+            filePath: path,
+            fileChangedStream: _fileContentObserverProvider.GetObservable(path, _getTextAsync),
+            appendFromBottom: AppendFromBottom);
     }
 
     private void AddFileViewModel(LogViewModel? logViewModel)
