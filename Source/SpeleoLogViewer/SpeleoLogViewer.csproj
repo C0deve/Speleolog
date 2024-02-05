@@ -7,11 +7,21 @@
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <Platforms>AnyCPU;x64</Platforms>
+        <ApplicationIcon>Assets\helmet.ico</ApplicationIcon>
     </PropertyGroup>
 
     <ItemGroup>
         <Folder Include="Models\" />
         <AvaloniaResource Include="Assets\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Assets\helmet.ico" />
+      <None Remove="Assets\logo.png" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="Assets\helmet.ico" />
     </ItemGroup>
 
 
