@@ -27,7 +27,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
 
     [ObservableProperty] private IRootDock? _layout;
     [ObservableProperty] private string? _fileText;
-    [ObservableProperty] private string _maskText = string.Empty;
+    
     private readonly List<string> _openFiles = [];
     public bool AppendFromBottom { get; private set; }
 
@@ -87,14 +87,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
             ErrorMessages?.Add(e.Message);
         }
     }
-
-    partial void OnMaskTextChanged(string maskText)
-    {
-        foreach (LogViewModel logViewModel in _factory.GetDockable<IDocumentDock>("Files").VisibleDockables)
-        {
-            logViewModel.Mask(maskText);
-        }
-    }
     
     private Task<IReadOnlyList<IStorageFile>> DoOpenFilePickerAsync() =>
         _storageProvider
@@ -104,7 +96,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
                 AllowMultiple = true
             });
 
-    private LogViewModel? OpenFileViewModel(string path)
+    private LogViewModel OpenFileViewModel(string path)
     {
         _openFiles.Add(path);
 
@@ -114,10 +106,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
             appendFromBottom: AppendFromBottom);
     }
 
-    private void AddFileViewModel(LogViewModel? logViewModel)
+    private void AddFileViewModel(LogViewModel logViewModel)
     {
-        if (logViewModel is null) return;
-
         var files = _factory.GetDockable<IDocumentDock>("Files");
         if (Layout is null || files is null) return;
 

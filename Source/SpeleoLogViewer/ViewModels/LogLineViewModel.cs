@@ -25,6 +25,8 @@ public partial class LogLineViewModel : ViewModelBase
 
     public void Mask(string maskText)
     {
-        Text = _originalText.Replace(maskText, "", StringComparison.InvariantCultureIgnoreCase);
+        Text = string.IsNullOrEmpty(maskText)
+            ? _originalText
+            : _originalText.Replace(maskText, "", StringComparison.InvariantCultureIgnoreCase);
     }
 }

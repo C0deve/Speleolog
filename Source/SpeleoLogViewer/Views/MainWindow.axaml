@@ -19,7 +19,6 @@
     <DockPanel DragDrop.AllowDrop="True" LastChildFill="True">
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">
             <Button Command="{Binding OpenFileCommand}">Open File</Button>
-            <TextBox Text="{Binding MaskText, Mode=TwoWay}" Width="300" />
         </StackPanel>
         <ListBox DockPanel.Dock="Bottom" ItemsSource="{Binding ErrorMessages}" />
         <DockControl Layout="{Binding Layout}" Margin="4" />

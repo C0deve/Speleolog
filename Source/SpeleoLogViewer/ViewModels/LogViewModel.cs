@@ -3,14 +3,17 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Mvvm.Controls;
 
 namespace SpeleoLogViewer.ViewModels;
 
-public sealed class LogViewModel : Document, IDisposable
+public partial class LogViewModel : Document, IDisposable
 {
     private readonly CompositeDisposable _disposables = [];
 
+    [ObservableProperty] private string _maskText = string.Empty;
+    
     public string FilePath { get; }
 
     public bool AppendFromBottom { get; }
@@ -37,10 +40,13 @@ public sealed class LogViewModel : Document, IDisposable
             .Merge(justAppend)
             .Do(lineVM =>
             {
+                lineVM.Mask(_maskText);
+                
                 if(AppendFromBottom)
                     AllLines.Add(lineVM);
                 else
                     AllLines.Insert(0, lineVM);
+                
             })
             .Subscribe(_ => { }, exception => Console.WriteLine(exception))
             .DisposeWith(_disposables);
@@ -48,13 +54,15 @@ public sealed class LogViewModel : Document, IDisposable
         AppendFromBottom = appendFromBottom;
     }
 
-    public void Dispose() => _disposables.Dispose();
-
-    public void Mask(string maskText)
+    public void Dispose()
     {
-        foreach (var logLineViewModel in AllLines)
-        {
-            logLineViewModel.Mask(maskText);
-        }
+        _disposables.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    partial void OnMaskTextChanged(string value)
+    {
+        foreach (var logLineViewModel in AllLines) 
+            logLineViewModel.Mask(value);
     }
 }

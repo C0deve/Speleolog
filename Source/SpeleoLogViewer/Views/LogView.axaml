@@ -61,11 +61,17 @@
                 </ItemsRepeater.ItemTemplate>
             </ItemsRepeater>
         </ScrollViewer>
-        <Grid ColumnDefinitions="*,Auto" Grid.Row="1">
+        <Grid ColumnDefinitions="Auto,*" Grid.Row="1">
             <TextBlock
                 Grid.Column="0"
                 Margin="2"
                 Text="{Binding FilePath}"
+                TextWrapping="Wrap"
+                VerticalAlignment="Center" />
+            <TextBox
+                Grid.Column="1"
+                Margin="2"
+                Text="{Binding MaskText}"
                 TextWrapping="Wrap"
                 VerticalAlignment="Center" />
         </Grid>
