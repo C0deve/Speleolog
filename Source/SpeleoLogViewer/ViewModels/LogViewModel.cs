@@ -49,4 +49,12 @@ public sealed class LogViewModel : Document, IDisposable
     }
 
     public void Dispose() => _disposables.Dispose();
+
+    public void Mask(string maskText)
+    {
+        foreach (var logLineViewModel in AllLines)
+        {
+            logLineViewModel.Mask(maskText);
+        }
+    }
 }

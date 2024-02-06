@@ -27,6 +27,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
 
     [ObservableProperty] private IRootDock? _layout;
     [ObservableProperty] private string? _fileText;
+    [ObservableProperty] private string _maskText = string.Empty;
     private readonly List<string> _openFiles = [];
     public bool AppendFromBottom { get; private set; }
 
@@ -87,6 +88,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
         }
     }
 
+    partial void OnMaskTextChanged(string maskText)
+    {
+        foreach (LogViewModel logViewModel in _factory.GetDockable<IDocumentDock>("Files").VisibleDockables)
+        {
+            logViewModel.Mask(maskText);
+        }
+    }
+    
     private Task<IReadOnlyList<IStorageFile>> DoOpenFilePickerAsync() =>
         _storageProvider
             .OpenFilePickerAsync(new FilePickerOpenOptions
