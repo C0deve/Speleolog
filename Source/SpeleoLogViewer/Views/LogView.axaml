@@ -10,7 +10,10 @@
     xmlns:viewModels="clr-namespace:SpeleoLogViewer.ViewModels"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Grid RowDefinitions="*,Auto">
-        <ScrollViewer AllowAutoHide="True" x:Name="Scroll" HorizontalScrollBarVisibility="Auto">
+        <ScrollViewer
+            AllowAutoHide="True"
+            HorizontalScrollBarVisibility="Auto"
+            x:Name="Scroll">
             <ItemsRepeater ItemsSource="{Binding AllLines}" SizeChanged="ItemsRepeater_OnSizeChanged">
                 <ItemsRepeater.Styles>
                     <Style Selector="SelectableTextBlock.error">
@@ -39,6 +42,7 @@
                             <Animation Duration="0:0:5" FillMode="Forward">
                                 <KeyFrame Cue="100%">
                                     <Setter Property="Opacity" Value="0.0" />
+                                    <Setter Property="IsVisible" Value="False" />
                                 </KeyFrame>
                                 <KeyFrame Cue="0%">
                                     <Setter Property="Opacity" Value="1.0" />
