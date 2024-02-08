@@ -33,10 +33,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
 
     public IEnumerable<string> OpenFiles => _openFiles.AsEnumerable();
 
-    public MainWindowViewModel(
-        IStorageProvider storageProvider, 
+    public MainWindowViewModel(IStorageProvider storageProvider,
         Func<string, CancellationToken, Task<string[]>> getTextAsync,
-        Func<string, IFileSystemObserver> fileSystemObserverFactory)
+        Func<string, IFileSystemObserver> fileSystemObserverFactory, 
+        ISpeleologStateRepository speleologStateRepository)
     {
         _storageProvider = storageProvider;
         _getTextAsync = getTextAsync;
@@ -48,7 +48,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
 
         // Load state from last application use
         Observable
-            .FromAsync(SpeleologStateRepository.GetAsync)
+            .FromAsync(speleologStateRepository.GetAsync)
             .WhereNotNull()
             .ObserveOn(SynchronizationContext.Current ?? throw new InvalidOperationException())
             .Do(state =>

@@ -5,26 +5,26 @@ using System.Threading.Tasks;
 
 namespace SpeleoLogViewer.Models;
 
-public static class SpeleologStateRepository
+public class SpeleologStateRepository : ISpeleologStateRepository
 {
     private const string FilePath = "SpeleologStateV1.json";
 
-    private static readonly JsonSerializerOptions Options = new()
+    private readonly JsonSerializerOptions _options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public static async Task SaveAsync(SpeleologState state, CancellationToken token = default)
+    public async Task SaveAsync(SpeleologState state, CancellationToken token = default)
     {
         if (File.Exists(FilePath)) File.Delete(FilePath); 
-        var json = JsonSerializer.Serialize(state, Options);
+        var json = JsonSerializer.Serialize(state, _options);
         await File.WriteAllTextAsync(FilePath, json, token).ConfigureAwait(false);
     }
 
-    public static async Task<SpeleologState?> GetAsync(CancellationToken token = default)
+    public async Task<SpeleologState?> GetAsync(CancellationToken token = default)
     {
         if (!File.Exists(FilePath)) return null;
         var param = await File.ReadAllTextAsync(FilePath, token).ConfigureAwait(false);
-        return JsonSerializer.Deserialize<SpeleologState>(param, Options);
+        return JsonSerializer.Deserialize<SpeleologState>(param, _options);
     }
 }

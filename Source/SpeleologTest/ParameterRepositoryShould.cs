@@ -40,9 +40,9 @@ public class ParameterRepositoryShould
         List<string> lastOpenFiles = ["log.txt", "log2.txt"];
         var expectedState = new SpeleologState(lastOpenFiles, false);
 
-        await SpeleologStateRepository.SaveAsync(expectedState);
+        await new SpeleologStateRepository().SaveAsync(expectedState);
 
-        (await SpeleologStateRepository.GetAsync())
+        (await new SpeleologStateRepository().GetAsync())
             .ShouldNotBeNull()
             .LastOpenFiles
             .ShouldBe(lastOpenFiles);

@@ -1,6 +1,7 @@
 using System.IO;
 using Avalonia.Controls;
 using Avalonia.Input;
+using SpeleoLogViewer.Models;
 using SpeleoLogViewer.Service;
 using SpeleoLogViewer.ViewModels;
 
@@ -15,7 +16,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         AddHandler(DragDrop.DropEvent, DropHandler);
         AddHandler(DragDrop.DragOverEvent, DragOverHandler);
-        DataContext = new MainWindowViewModel(StorageProvider, File.ReadAllLinesAsync, FileSystemWatcherFactory);
+        DataContext = new MainWindowViewModel(StorageProvider, File.ReadAllLinesAsync, FileSystemWatcherFactory, new SpeleologStateRepository());
     }
 
     private static FileSystemObserverWrapper FileSystemWatcherFactory(string directoryPath) =>

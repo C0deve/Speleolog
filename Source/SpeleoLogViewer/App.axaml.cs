@@ -26,7 +26,7 @@ public partial class App : Application
                 var state = new SpeleologState(
                     (desktopMainWindow.ViewModel?.OpenFiles ?? Enumerable.Empty<string>()).ToList(), 
                     desktopMainWindow.ViewModel?.AppendFromBottom ?? true);
-                SpeleologStateRepository.SaveAsync(state);
+                new SpeleologStateRepository().SaveAsync(state);
                 desktopMainWindow.ViewModel?.CloseLayout();
             };
             desktop.Exit += (_, _) => { desktopMainWindow.ViewModel?.CloseLayout(); };

@@ -10,6 +10,19 @@ public class LogViewModelShould
     private static readonly TimeSpan OperationDelay = TimeSpan.FromMilliseconds(10);
 
     [Fact]
+    public async Task AppendLinesOnFileChanged()
+    {
+        string[] lines = ["A", "B", "C"];
+        var emitter = new Subject<string[]>();
+        using var sut = new LogViewModel("", emitter.AsObservable(), true);
+        
+        emitter.OnNext(lines);
+        await Task.Delay(OperationDelay);
+
+        sut.AllLines.Select(lineVM => lineVM.Text).ShouldBe(lines);
+    }
+    
+    [Fact]
     public async Task AppendLinesInReverseOnFileChanged()
     {
         string[] lines = ["A", "B", "C"];
@@ -46,5 +59,18 @@ public class LogViewModelShould
         emitter.OnNext(["A", "B", "C", "D", "E"]);
         await Task.Delay(OperationDelay);
         sut.AllLines.Take(2).All(vm => vm.JustAppend).ShouldBeTrue();
+    }
+    
+    [Fact]
+    public async Task MaskText()
+    {
+        var emitter = new Subject<string[]>();
+        using var sut = new LogViewModel("", emitter.AsObservable(), true);
+        emitter.OnNext(["mask A", "B masK", "CMASK"]);
+        await Task.Delay(OperationDelay);
+
+        sut.MaskText = "mask";
+        
+        sut.AllLines.Select(lineVM => lineVM.Text).ShouldBe([" A", "B ", "C"]);
     }
 }
