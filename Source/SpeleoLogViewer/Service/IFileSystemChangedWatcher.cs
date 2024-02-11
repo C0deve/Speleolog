@@ -3,8 +3,7 @@ using System.IO;
 
 namespace SpeleoLogViewer.Service;
 
-public interface IFileSystemObserver : IDisposable
+public interface IFileSystemChangedWatcher : IDisposable
 {
     event FileSystemEventHandler Changed;
-    event FileSystemEventHandler Deleted;
 }

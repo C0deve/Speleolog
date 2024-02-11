@@ -22,8 +22,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
 
     private readonly IStorageProvider _storageProvider;
     private readonly Func<string, CancellationToken, Task<string[]>> _getTextAsync;
+    private readonly ISchedulerProvider _schedulerProvider;
     private readonly DockFactory _factory;
-    private readonly FileContentObserverProvider _fileContentObserverProvider;
+    private readonly FileSystemChangedObserverFactory _fileSystemChangedObserverFactory;
 
     [ObservableProperty] private IRootDock? _layout;
     [ObservableProperty] private string? _fileText;
@@ -35,20 +36,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
 
     public MainWindowViewModel(IStorageProvider storageProvider,
         Func<string, CancellationToken, Task<string[]>> getTextAsync,
-        Func<string, IFileSystemObserver> fileSystemObserverFactory, 
-        ISpeleologStateRepository speleologStateRepository)
+        Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory, 
+        ISpeleologStateRepository speleologStateRepository,
+        ISchedulerProvider schedulerProvider)
     {
         _storageProvider = storageProvider;
         _getTextAsync = getTextAsync;
+        _schedulerProvider = schedulerProvider;
         _factory = new DockFactory();
         Layout = _factory.CreateLayout();
         if (Layout is not null) _factory.InitLayout(Layout);
 
-        _fileContentObserverProvider = new FileContentObserverProvider(fileSystemObserverFactory);
+        _fileSystemChangedObserverFactory = new FileSystemChangedObserverFactory(fileSystemObserverFactory);
 
         // Load state from last application use
         Observable
-            .FromAsync(speleologStateRepository.GetAsync)
+            .FromAsync(speleologStateRepository.GetAsync, _schedulerProvider.Default)
             .WhereNotNull()
             .ObserveOn(SynchronizationContext.Current ?? throw new InvalidOperationException())
             .Do(state =>
@@ -102,7 +105,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
 
         return new LogViewModel(
             filePath: path,
-            fileChangedStream: _fileContentObserverProvider.GetObservable(path, _getTextAsync),
+            fileChangedStream: _fileSystemChangedObserverFactory.GetObservable(path, _getTextAsync, _schedulerProvider.Default),
             appendFromBottom: AppendFromBottom);
     }
 

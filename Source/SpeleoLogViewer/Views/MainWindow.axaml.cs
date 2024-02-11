@@ -16,15 +16,11 @@ public partial class MainWindow : Window
         InitializeComponent();
         AddHandler(DragDrop.DropEvent, DropHandler);
         AddHandler(DragDrop.DragOverEvent, DragOverHandler);
-        DataContext = new MainWindowViewModel(StorageProvider, File.ReadAllLinesAsync, FileSystemWatcherFactory, new SpeleologStateRepository());
+        DataContext = new MainWindowViewModel(StorageProvider, File.ReadAllLinesAsync, FileSystemWatcherFactory, new SpeleologStateRepository(), new SchedulerProvider());
     }
 
-    private static FileSystemObserverWrapper FileSystemWatcherFactory(string directoryPath) =>
-        new(
-            new FileSystemWatcher(directoryPath)
-            {
-                EnableRaisingEvents = true
-            });
+    private static FileSystemChangedWatcher FileSystemWatcherFactory(string directoryPath) =>
+        new(directoryPath);
     
     private void DragOverHandler(object? sender, DragEventArgs e)
     {

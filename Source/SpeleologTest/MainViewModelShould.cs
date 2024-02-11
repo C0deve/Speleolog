@@ -23,8 +23,7 @@ public class MainViewModelShould
             storageProvider,
             (_, _) => Task.FromResult<string[]>([]),
             FileSystemObserverFactory(), 
-            stateProvider
-            );
+            stateProvider, new SchedulerProvider());
         
         sut.OpenFileCommand.Execute(null);
 
@@ -32,7 +31,7 @@ public class MainViewModelShould
         sut.CloseLayout();
         return;
 
-        Func<string, IFileSystemObserver> FileSystemObserverFactory() =>
-            _ => Substitute.For<IFileSystemObserver>();
+        Func<string, IFileSystemChangedWatcher> FileSystemObserverFactory() =>
+            _ => Substitute.For<IFileSystemChangedWatcher>();
     }
 }

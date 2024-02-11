@@ -2,18 +2,19 @@
 
 namespace SpeleoLogViewer.Service;
 
-public sealed class FileSystemObserverWrapper : IFileSystemObserver
+public sealed class FileSystemChangedWatcher : IFileSystemChangedWatcher
 {
     private readonly FileSystemWatcher _fileSystemWatcher;
 
-    public FileSystemObserverWrapper(FileSystemWatcher fileSystemWatcher)
+    public FileSystemChangedWatcher(string directoryPath)
     {
-        _fileSystemWatcher = fileSystemWatcher;
+        _fileSystemWatcher = new FileSystemWatcher(directoryPath);
+        _fileSystemWatcher.EnableRaisingEvents = true;
+        _fileSystemWatcher.NotifyFilter = NotifyFilters.LastWrite;
+        
         _fileSystemWatcher.Changed += (sender, args) => Changed?.Invoke(sender, args);
-        _fileSystemWatcher.Deleted += (sender, args) => Deleted?.Invoke(sender, args);
     }
 
     public void Dispose() => _fileSystemWatcher.Dispose();
     public event FileSystemEventHandler? Changed;
-    public event FileSystemEventHandler? Deleted;
 }
