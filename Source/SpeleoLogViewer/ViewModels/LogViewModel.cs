@@ -14,6 +14,8 @@ public partial class LogViewModel : Document, IDisposable
 
     [ObservableProperty] private string _maskText = string.Empty;
     
+    [ObservableProperty] private string _filter = string.Empty;
+    
     public string FilePath { get; }
 
     public bool AppendFromBottom { get; }
@@ -40,6 +42,9 @@ public partial class LogViewModel : Document, IDisposable
             .Merge(justAppend)
             .Do(lineVM =>
             {
+                if(IsFiltered(_filter, lineVM))
+                    return;
+
                 lineVM.Mask(_maskText);
                 
                 if(AppendFromBottom)
@@ -65,4 +70,17 @@ public partial class LogViewModel : Document, IDisposable
         foreach (var logLineViewModel in AllLines) 
             logLineViewModel.Mask(value);
     }
+    
+    partial void OnFilterChanged(string value)
+    {
+        var toRemove = AllLines
+            .Where(model => IsFiltered(value, model))
+            .ToList();
+
+        foreach (var logLineViewModel in toRemove) 
+            AllLines.Remove(logLineViewModel);
+    }
+
+    private static bool IsFiltered(string value, LogLineViewModel model) => 
+       !string.IsNullOrWhiteSpace(value) && model.Text.Contains(value, StringComparison.InvariantCultureIgnoreCase);
 }
