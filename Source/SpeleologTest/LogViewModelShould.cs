@@ -73,4 +73,46 @@ public class LogViewModelShould
         
         sut.AllLines.Select(lineVM => lineVM.Text).ShouldBe([" A", "B ", "C"]);
     }
+    
+    [Fact]
+    public async Task DisplayLinesContainingFilterOnFilterChanged()
+    {
+        var emitter = new Subject<string[]>();
+        using var sut = new LogViewModel("", emitter.AsObservable(), true);
+        emitter.OnNext(["mask A", "B masK", "CMASK", "coucou"]);
+        await Task.Delay(OperationDelay);
+
+        sut.Filter = "mask";
+        
+        sut.AllLines.Select(lineVM => lineVM.Text).ShouldBe(["mask A", "B masK", "CMASK"]);
+    }
+    
+    [Fact]
+    public async Task DisplayLinesContainingFilterOnFileChanged()
+    {
+        var emitter = new Subject<string[]>();
+        using var sut = new LogViewModel("", emitter.AsObservable(), true);
+        emitter.OnNext(["coucou"]);
+        await Task.Delay(OperationDelay);
+
+        sut.Filter = "mask";
+        emitter.OnNext(["coucou", "mask A", "B masK", "CMASK"]);
+        await Task.Delay(OperationDelay);
+
+        sut.AllLines.Select(lineVM => lineVM.Text).ShouldBe(["mask A", "B masK", "CMASK"]);
+    }
+    
+    [Fact]
+    public async Task DisplayAllLinesOnResetFilter()
+    {
+        var emitter = new Subject<string[]>();
+        using var sut = new LogViewModel("", emitter.AsObservable(), true);
+        emitter.OnNext(["coucou", "mask A"]);
+        await Task.Delay(OperationDelay);
+        sut.Filter = "mask";
+        
+        sut.Filter = "";
+
+        sut.AllLines.Select(lineVM => lineVM.Text).ShouldBe(["coucou", "mask A"]);
+    }
 }

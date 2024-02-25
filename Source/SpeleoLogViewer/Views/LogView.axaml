@@ -77,13 +77,15 @@
                 Margin="2"
                 Text="{Binding MaskText}"
                 TextWrapping="Wrap"
-                VerticalAlignment="Center" />
+                VerticalAlignment="Center"
+                Watermark="Masquer" />
             <TextBox
                 Grid.Column="2"
                 Margin="2"
                 Text="{Binding Filter}"
                 TextWrapping="Wrap"
-                VerticalAlignment="Center" />
+                VerticalAlignment="Center"
+                Watermark="Rechercher" />
         </Grid>
     </Grid>
 </UserControl>

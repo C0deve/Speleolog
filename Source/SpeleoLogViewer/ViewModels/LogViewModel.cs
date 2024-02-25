@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Disposables;
@@ -15,7 +16,8 @@ public partial class LogViewModel : Document, IDisposable
     [ObservableProperty] private string _maskText = string.Empty;
     
     [ObservableProperty] private string _filter = string.Empty;
-    
+    private readonly HashSet<LogLineViewModel> _original = new();
+
     public string FilePath { get; }
 
     public bool AppendFromBottom { get; }
@@ -40,23 +42,18 @@ public partial class LogViewModel : Document, IDisposable
         
         firstLines
             .Merge(justAppend)
-            .Do(lineVM =>
-            {
-                if(IsFiltered(_filter, lineVM))
-                    return;
-
-                lineVM.Mask(_maskText);
-                
-                if(AppendFromBottom)
-                    AllLines.Add(lineVM);
-                else
-                    AllLines.Insert(0, lineVM);
-                
-            })
+            .Do(AddLine)
             .Subscribe(_ => { }, exception => Console.WriteLine(exception))
             .DisposeWith(_disposables);
         
         AppendFromBottom = appendFromBottom;
+    }
+
+    private void AddLine(LogLineViewModel lineVM)
+    {
+        lineVM.Mask(MaskText);
+        _original.Add(lineVM);
+        Display(lineVM);
     }
 
     public void Dispose()
@@ -67,20 +64,27 @@ public partial class LogViewModel : Document, IDisposable
 
     partial void OnMaskTextChanged(string value)
     {
-        foreach (var logLineViewModel in AllLines) 
+        foreach (var logLineViewModel in _original) 
             logLineViewModel.Mask(value);
     }
     
-    partial void OnFilterChanged(string value)
+    partial void OnFilterChanged(string _)
     {
-        var toRemove = AllLines
-            .Where(model => IsFiltered(value, model))
-            .ToList();
-
-        foreach (var logLineViewModel in toRemove) 
-            AllLines.Remove(logLineViewModel);
+        AllLines.Clear();
+        foreach (var logLineViewModel in _original) Display(logLineViewModel);
     }
 
-    private static bool IsFiltered(string value, LogLineViewModel model) => 
-       !string.IsNullOrWhiteSpace(value) && model.Text.Contains(value, StringComparison.InvariantCultureIgnoreCase);
+    private void Display(LogLineViewModel lineVM)
+    {
+        if(!IsDisplayed(lineVM))
+            return;
+        
+        if(AppendFromBottom)
+            AllLines.Add(lineVM);
+        else
+            AllLines.Insert(0, lineVM);
+    }
+
+    private  bool IsDisplayed(LogLineViewModel model) => 
+       string.IsNullOrWhiteSpace(Filter) || model.Text.Contains(Filter, StringComparison.InvariantCultureIgnoreCase);
 }
