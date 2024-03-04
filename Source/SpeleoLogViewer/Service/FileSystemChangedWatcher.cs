@@ -12,9 +12,17 @@ public sealed class FileSystemChangedWatcher : IFileSystemChangedWatcher
         _fileSystemWatcher.EnableRaisingEvents = true;
         _fileSystemWatcher.NotifyFilter = NotifyFilters.LastWrite;
         
-        _fileSystemWatcher.Changed += (sender, args) => Changed?.Invoke(sender, args);
+        _fileSystemWatcher.Changed += OnFileSystemWatcherOnChanged;
     }
 
-    public void Dispose() => _fileSystemWatcher.Dispose();
+    private void OnFileSystemWatcherOnChanged(object sender, FileSystemEventArgs args) => 
+        Changed?.Invoke(sender, args);
+
+    public void Dispose()
+    {
+        _fileSystemWatcher.Changed -= OnFileSystemWatcherOnChanged;
+        _fileSystemWatcher.Dispose();
+    }
+
     public event FileSystemEventHandler? Changed;
 }

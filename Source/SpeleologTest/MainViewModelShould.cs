@@ -19,11 +19,7 @@ public class MainViewModelShould
         storageProvider
             .OpenFilePickerAsync(Arg.Any<FilePickerOpenOptions>())
             .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { file }.AsReadOnly()));
-        using var sut = new MainWindowViewModel(
-            storageProvider,
-            (_, _) => Task.FromResult<string[]>([]),
-            FileSystemObserverFactory(), 
-            stateProvider, new SchedulerProvider());
+        using var sut = new MainWindowViewModel(storageProvider, new TestTextFileLoaderLineByLine((_, _) => Task.FromResult<IEnumerable<string>>([])), FileSystemObserverFactory(), stateProvider, new SchedulerProvider());
         
         sut.OpenFileCommand.Execute(null);
 

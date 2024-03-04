@@ -21,7 +21,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
     private readonly CompositeDisposable _disposables = [];
 
     private readonly IStorageProvider _storageProvider;
-    private readonly Func<string, CancellationToken, Task<string[]>> _getTextAsync;
+    private readonly ITextFileLoader _textFileLoader;
     private readonly ISchedulerProvider _schedulerProvider;
     private readonly DockFactory _factory;
     private readonly FileSystemChangedObserverFactory _fileSystemChangedObserverFactory;
@@ -34,14 +34,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
 
     public IEnumerable<string> OpenFiles => _openFiles.AsEnumerable();
 
-    public MainWindowViewModel(IStorageProvider storageProvider,
-        Func<string, CancellationToken, Task<string[]>> getTextAsync,
+    public MainWindowViewModel(IStorageProvider storageProvider, 
+        ITextFileLoader textFileLoader,
         Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory, 
         ISpeleologStateRepository speleologStateRepository,
         ISchedulerProvider schedulerProvider)
     {
         _storageProvider = storageProvider;
-        _getTextAsync = getTextAsync;
+        _textFileLoader = textFileLoader;
         _schedulerProvider = schedulerProvider;
         _factory = new DockFactory();
         Layout = _factory.CreateLayout();
@@ -105,7 +105,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
 
         return new LogViewModel(
             filePath: path,
-            fileChangedStream: _fileSystemChangedObserverFactory.GetObservable(path, _getTextAsync, _schedulerProvider.Default),
+            fileChangedStream: _fileSystemChangedObserverFactory.GetObservable(path, _textFileLoader, _schedulerProvider.Default),
             appendFromBottom: AppendFromBottom);
     }
 

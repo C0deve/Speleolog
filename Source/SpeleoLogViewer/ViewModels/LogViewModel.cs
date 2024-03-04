@@ -25,7 +25,7 @@ public partial class LogViewModel : Document, IDisposable
     public ObservableCollection<LogLineViewModel> AllLines { get; } = [];
 
     /// <inheritdoc/>
-    public LogViewModel(string filePath, IObservable<string[]> fileChangedStream, bool appendFromBottom)
+    public LogViewModel(string filePath, IObservable<IEnumerable<string>> fileChangedStream, bool appendFromBottom)
     {
         FilePath = filePath;
         Title = System.IO.Path.GetFileName(FilePath);

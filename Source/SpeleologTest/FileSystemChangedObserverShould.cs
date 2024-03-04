@@ -3,6 +3,7 @@ using Microsoft.Reactive.Testing;
 using NSubstitute;
 using Shouldly;
 using SpeleoLogViewer.Service;
+using SpeleoLogViewer.ViewModels;
 
 namespace SpeleologTest;
 
@@ -11,22 +12,23 @@ public class FileSystemChangedObserverShould
     [Fact]
     public async Task EmitOnFileChangedIntegration()
     {
-        var scheduler = new TestScheduler();
+        //var scheduler = new TestScheduler();
         var actual = Array.Empty<string>();
         var filePath = Utils.CreateUniqueEmptyFile();
+
+        var fileContentObserverProvider = new FileSystemChangedObserverFactory(directoryPath => new FileSystemChangedWatcher(directoryPath));
+        var disposable = fileContentObserverProvider
+            .GetObservable(filePath, new TextFileLoaderInOneRead(), Scheduler.Default)
+            .Subscribe(strings => actual = strings.ToArray());
         
-        var fileContentObserverProvider = new FileSystemChangedObserverFactory(p => new FileSystemChangedWatcher(p));
-        fileContentObserverProvider
-            .GetObservable(filePath, File.ReadAllLinesAsync, scheduler)
-            .Subscribe(strings => actual = strings);
-        scheduler.AdvanceBy(TimeSpan.FromMilliseconds(1).Ticks);
-       
-        await File.AppendAllTextAsync(filePath, "a" + Environment.NewLine);
-        await Task.Delay(TimeSpan.FromMilliseconds(100));
-        scheduler.AdvanceBy(TimeSpan.FromMilliseconds(501).Ticks);
-        
+        await File.AppendAllLinesAsync(filePath, ["a"]);
+        await Task.Delay(FileSystemChangedObserverFactory.ThrottleDuration + TimeSpan.FromMilliseconds(1 + 50)); // 1 for throttle, 50 for file loading
+        await Task.Delay(TimeSpan.FromMilliseconds(50));
+
+        disposable.Dispose();
         File.Delete(filePath);
         actual.ShouldBe(["a"]);
+
     }
 
     [Fact]
@@ -34,11 +36,11 @@ public class FileSystemChangedObserverShould
     {
         var scheduler = new TestScheduler();
         var actual = Array.Empty<string>();
-        var file = new FileSystemChangedObserverShould.FileTest(Array.Empty<string>());
+        var file = new FileTest(Array.Empty<string>());
         var fileSystemObserver = Substitute.For<IFileSystemChangedWatcher>();
         var fileContentObserverProvider = new FileSystemChangedObserverFactory(_ => fileSystemObserver);
-        var sut = fileContentObserverProvider.GetObservable(file.Name, (_, _) => file.GetTextAsync(), scheduler);
-        sut.Subscribe(strings => actual = strings);
+        var sut = fileContentObserverProvider.GetObservable(file.Name, new TestTextFileLoaderLineByLine((_, _) => file.GetTextAsync()), scheduler);
+        sut.Subscribe(strings => actual = strings.ToArray());
 
         scheduler.Schedule(() =>
         {
@@ -58,11 +60,11 @@ public class FileSystemChangedObserverShould
     {
         var scheduler = new TestScheduler();
         var actual = Array.Empty<string>();
-        var file = new FileSystemChangedObserverShould.FileTest(Array.Empty<string>());
+        var file = new FileTest(Array.Empty<string>());
         var fileSystemObserver = Substitute.For<IFileSystemChangedWatcher>();
         var fileContentObserverProvider = new FileSystemChangedObserverFactory(_ => fileSystemObserver);
-        var sut = fileContentObserverProvider.GetObservable(file.Name, (_, _) => file.GetTextAsync(), scheduler);
-        sut.Subscribe(strings => actual = strings);
+        var sut = fileContentObserverProvider.GetObservable(file.Name, new TestTextFileLoaderLineByLine((_, _) => file.GetTextAsync()), scheduler);
+        sut.Subscribe(strings => actual = strings.ToArray());
 
         scheduler.Schedule(() =>
         {
@@ -82,12 +84,12 @@ public class FileSystemChangedObserverShould
     public void ThrottleChangedEvent()
     {
         var actual = Array.Empty<string>();
-        var file = new FileSystemChangedObserverShould.FileTest(Array.Empty<string>());
+        var file = new FileTest(Array.Empty<string>());
         var scheduler = new TestScheduler();
         var fileSystemObserver = Substitute.For<IFileSystemChangedWatcher>();
         var fileContentObserverProvider = new FileSystemChangedObserverFactory(_ => fileSystemObserver);
-        var sut = fileContentObserverProvider.GetObservable(file.Name, (_, _) => file.GetTextAsync(), scheduler);
-        sut.Subscribe(strings => actual = strings);
+        var sut = fileContentObserverProvider.GetObservable(file.Name, new TestTextFileLoaderLineByLine((_, _) => file.GetTextAsync()), scheduler);
+        sut.Subscribe(strings => actual = strings.ToArray());
 
         for (var i = 0; i < 10; i++)
         {
@@ -119,16 +121,16 @@ public class FileSystemChangedObserverShould
         public int NbCall { get; private set; }
         public string Name { get; } = $"{Guid.NewGuid()}.txt";
 
-        public FileSystemChangedObserverShould.FileTest AddLine(string line)
+        public FileTest AddLine(string line)
         {
             _lines.Add(line);
             return this;
         }
 
-        public Task<string[]> GetTextAsync()
+        public Task<IEnumerable<string>> GetTextAsync()
         {
             NbCall++;
-            return Task.FromResult(_lines.ToArray());
+            return Task.FromResult(_lines.AsEnumerable());
         }
     }
 }
