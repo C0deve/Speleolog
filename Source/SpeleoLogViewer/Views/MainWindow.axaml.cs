@@ -18,7 +18,7 @@ public partial class MainWindow : Window
         AddHandler(DragDrop.DragOverEvent, DragOverHandler);
         DataContext = new MainWindowViewModel(
             StorageProvider, 
-            new TextFileLoaderLineByLine(), 
+            new TextFileLoaderInOneRead(), 
             FileSystemWatcherFactory, 
             new SpeleologStateRepository(), 
             new SchedulerProvider());
