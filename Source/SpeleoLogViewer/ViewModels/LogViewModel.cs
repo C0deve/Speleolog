@@ -76,7 +76,7 @@ public partial class LogViewModel : Document, IDisposable
 
     private void Display(LogLineViewModel lineVM)
     {
-        if(!IsDisplayed(lineVM))
+        if(IsFiltered(lineVM))
             return;
         
         if(AppendFromBottom)
@@ -85,6 +85,6 @@ public partial class LogViewModel : Document, IDisposable
             AllLines.Insert(0, lineVM);
     }
 
-    private  bool IsDisplayed(LogLineViewModel model) => 
-       string.IsNullOrWhiteSpace(Filter) || model.Text.Contains(Filter, StringComparison.InvariantCultureIgnoreCase);
+    private  bool IsFiltered(LogLineViewModel model) => 
+        !string.IsNullOrWhiteSpace(Filter) && !model.Text.Contains(Filter, StringComparison.InvariantCultureIgnoreCase);
 }
