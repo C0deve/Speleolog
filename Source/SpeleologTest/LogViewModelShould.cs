@@ -44,7 +44,7 @@ public class LogViewModelShould
         emitter.OnNext(["A", "B", "C"]);
         await Task.Delay(OperationDelay);
 
-        sut.AllLines.Any(vm => vm.JustAppend).ShouldBeFalse();
+        sut.AllLines.Any(vm => vm.JustAdded).ShouldBeFalse();
     }
     
     [Fact]
@@ -58,7 +58,7 @@ public class LogViewModelShould
 
         emitter.OnNext(["A", "B", "C", "D", "E"]);
         await Task.Delay(OperationDelay);
-        sut.AllLines.Take(2).All(vm => vm.JustAppend).ShouldBeTrue();
+        sut.AllLines.Take(2).All(vm => vm.JustAdded).ShouldBeTrue();
     }
     
     [Fact]
