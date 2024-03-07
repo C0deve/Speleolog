@@ -1,4 +1,5 @@
 ﻿using Avalonia.Platform.Storage;
+using Dock.Model.Mvvm.Controls;
 using NSubstitute;
 using Shouldly;
 using SpeleoLogViewer.Models;
@@ -10,7 +11,7 @@ namespace SpeleologTest;
 public class MainViewModelShould
 {
     [Fact]
-    public void AddALoginViewModelOnOpenFileCommand()
+    public void AddFilePathToOpenFilesOnOpenFileCommand()
     {
         var stateProvider = Substitute.For<ISpeleologStateRepository>();
         var storageProvider = Substitute.For<IStorageProvider>();
@@ -24,6 +25,30 @@ public class MainViewModelShould
         sut.OpenFileCommand.Execute(null);
 
         sut.OpenFiles.Count().ShouldBe(1);
+        sut.CloseLayout();
+        return;
+
+        Func<string, IFileSystemChangedWatcher> FileSystemObserverFactory() =>
+            _ => Substitute.For<IFileSystemChangedWatcher>();
+    }
+    
+    [Fact]
+    public void RemoveFilePathToOpenFilesOnOpenFileCommand()
+    {
+        var stateProvider = Substitute.For<ISpeleologStateRepository>();
+        var storageProvider = Substitute.For<IStorageProvider>();
+        var file = Substitute.For<IStorageFile>();
+        file.Path.Returns(new Uri("c:/test.txt"));
+        storageProvider
+            .OpenFilePickerAsync(Arg.Any<FilePickerOpenOptions>())
+            .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { file }.AsReadOnly()));
+        using var sut = new MainWindowViewModel(storageProvider, new TestTextFileLoaderLineByLine((_, _) => Task.FromResult<IEnumerable<string>>([])), FileSystemObserverFactory(), stateProvider, new SchedulerProvider());
+        sut.OpenFileCommand.Execute(null);
+        var documentDock = ((DocumentDock)sut.Layout!.ActiveDockable!).ActiveDockable!;
+        
+        sut.Layout!.Factory!.CloseDockable(documentDock);
+        
+        sut.OpenFiles.Count().ShouldBe(0);
         sut.CloseLayout();
         return;
 

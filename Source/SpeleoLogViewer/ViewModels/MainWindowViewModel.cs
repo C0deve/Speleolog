@@ -46,7 +46,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
         _factory = new DockFactory();
         Layout = _factory.CreateLayout();
         if (Layout is not null) _factory.InitLayout(Layout);
-
+        _factory.DockableClosed += (sender, args) =>
+        {
+            if (args.Dockable is LogViewModel logViewModel)
+                _openFiles.Remove(logViewModel.FilePath);
+        };
+        
         _fileSystemChangedObserverFactory = new FileSystemChangedObserverFactory(fileSystemObserverFactory);
 
         // Load state from last application use
