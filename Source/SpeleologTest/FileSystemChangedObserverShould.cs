@@ -39,7 +39,7 @@ public class FileSystemChangedObserverShould
         var file = new FileTest(Array.Empty<string>());
         var fileSystemObserver = Substitute.For<IFileSystemChangedWatcher>();
         var fileContentObserverProvider = new FileSystemChangedObserverFactory(_ => fileSystemObserver);
-        var sut = fileContentObserverProvider.GetObservable(file.Name, new TestTextFileLoaderLineByLine((_, _) => file.GetTextAsync()), scheduler);
+        var sut = fileContentObserverProvider.GetObservable(file.Name, new TextFileLoaderForTest((_, _) => file.GetTextAsync()), scheduler);
         sut.Subscribe(strings => actual = strings.ToArray());
 
         scheduler.Schedule(() =>
@@ -63,7 +63,7 @@ public class FileSystemChangedObserverShould
         var file = new FileTest(Array.Empty<string>());
         var fileSystemObserver = Substitute.For<IFileSystemChangedWatcher>();
         var fileContentObserverProvider = new FileSystemChangedObserverFactory(_ => fileSystemObserver);
-        var sut = fileContentObserverProvider.GetObservable(file.Name, new TestTextFileLoaderLineByLine((_, _) => file.GetTextAsync()), scheduler);
+        var sut = fileContentObserverProvider.GetObservable(file.Name, new TextFileLoaderForTest((_, _) => file.GetTextAsync()), scheduler);
         sut.Subscribe(strings => actual = strings.ToArray());
 
         scheduler.Schedule(() =>
@@ -88,7 +88,7 @@ public class FileSystemChangedObserverShould
         var scheduler = new TestScheduler();
         var fileSystemObserver = Substitute.For<IFileSystemChangedWatcher>();
         var fileContentObserverProvider = new FileSystemChangedObserverFactory(_ => fileSystemObserver);
-        var sut = fileContentObserverProvider.GetObservable(file.Name, new TestTextFileLoaderLineByLine((_, _) => file.GetTextAsync()), scheduler);
+        var sut = fileContentObserverProvider.GetObservable(file.Name, new TextFileLoaderForTest((_, _) => file.GetTextAsync()), scheduler);
         sut.Subscribe(strings => actual = strings.ToArray());
 
         for (var i = 0; i < 10; i++)

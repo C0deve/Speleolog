@@ -20,20 +20,16 @@ public class MainViewModelShould
         storageProvider
             .OpenFilePickerAsync(Arg.Any<FilePickerOpenOptions>())
             .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { file }.AsReadOnly()));
-        using var sut = new MainWindowViewModel(storageProvider, new TestTextFileLoaderLineByLine((_, _) => Task.FromResult<IEnumerable<string>>([])), FileSystemObserverFactory(), stateProvider, new SchedulerProvider());
-        
+        using var sut = new MainWindowViewModel(storageProvider, new EmptyFileLoader(), _ => Substitute.For<IFileSystemChangedWatcher>(), stateProvider, new SchedulerProvider());
+
         sut.OpenFileCommand.Execute(null);
 
         sut.OpenFiles.Count().ShouldBe(1);
         sut.CloseLayout();
-        return;
-
-        Func<string, IFileSystemChangedWatcher> FileSystemObserverFactory() =>
-            _ => Substitute.For<IFileSystemChangedWatcher>();
     }
-    
+
     [Fact]
-    public void RemoveFilePathToOpenFilesOnOpenFileCommand()
+    public void RemoveFilePathFromOpenFilesOnCloseDocument()
     {
         var stateProvider = Substitute.For<ISpeleologStateRepository>();
         var storageProvider = Substitute.For<IStorageProvider>();
@@ -42,17 +38,13 @@ public class MainViewModelShould
         storageProvider
             .OpenFilePickerAsync(Arg.Any<FilePickerOpenOptions>())
             .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { file }.AsReadOnly()));
-        using var sut = new MainWindowViewModel(storageProvider, new TestTextFileLoaderLineByLine((_, _) => Task.FromResult<IEnumerable<string>>([])), FileSystemObserverFactory(), stateProvider, new SchedulerProvider());
+        using var sut = new MainWindowViewModel(storageProvider, new EmptyFileLoader(), _ => Substitute.For<IFileSystemChangedWatcher>(), stateProvider, new SchedulerProvider());
         sut.OpenFileCommand.Execute(null);
         var documentDock = ((DocumentDock)sut.Layout!.ActiveDockable!).ActiveDockable!;
-        
+
         sut.Layout!.Factory!.CloseDockable(documentDock);
-        
+
         sut.OpenFiles.Count().ShouldBe(0);
         sut.CloseLayout();
-        return;
-
-        Func<string, IFileSystemChangedWatcher> FileSystemObserverFactory() =>
-            _ => Substitute.For<IFileSystemChangedWatcher>();
     }
 }
