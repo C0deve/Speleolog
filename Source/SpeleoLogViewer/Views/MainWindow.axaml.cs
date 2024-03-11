@@ -1,8 +1,8 @@
-using System.IO;
 using Avalonia.Controls;
 using Avalonia.Input;
 using SpeleoLogViewer.Models;
 using SpeleoLogViewer.Service;
+using SpeleoLogViewer.SpeleologTemplate;
 using SpeleoLogViewer.ViewModels;
 
 namespace SpeleoLogViewer.Views;
@@ -21,7 +21,8 @@ public partial class MainWindow : Window
             new TextFileLoaderInOneRead(), 
             FileSystemWatcherFactory, 
             new SpeleologStateRepository(), 
-            new SchedulerProvider());
+            new SchedulerProvider(), 
+            new SpeleologTemplateReader());
     }
 
     private static FileSystemChangedWatcher FileSystemWatcherFactory(string directoryPath) =>

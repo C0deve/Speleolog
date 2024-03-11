@@ -13,6 +13,7 @@ using Dock.Model.Core;
 using ReactiveUI;
 using SpeleoLogViewer.Models;
 using SpeleoLogViewer.Service;
+using SpeleoLogViewer.SpeleologTemplate;
 
 namespace SpeleoLogViewer.ViewModels;
 
@@ -23,35 +24,37 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
     private readonly IStorageProvider _storageProvider;
     private readonly ITextFileLoader _textFileLoader;
     private readonly ISchedulerProvider _schedulerProvider;
+    private readonly ISpeleologTemplateReader _templateReader;
     private readonly DockFactory _factory;
     private readonly FileSystemChangedObserverFactory _fileSystemChangedObserverFactory;
 
     [ObservableProperty] private IRootDock? _layout;
-    [ObservableProperty] private string? _fileText;
-    
+
     private readonly List<string> _openFiles = [];
     public bool AppendFromBottom { get; private set; }
 
     public IEnumerable<string> OpenFiles => _openFiles.AsEnumerable();
 
-    public MainWindowViewModel(IStorageProvider storageProvider, 
+    public MainWindowViewModel(IStorageProvider storageProvider,
         ITextFileLoader textFileLoader,
-        Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory, 
+        Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory,
         ISpeleologStateRepository speleologStateRepository,
-        ISchedulerProvider schedulerProvider)
+        ISchedulerProvider schedulerProvider,
+        ISpeleologTemplateReader templateReader)
     {
         _storageProvider = storageProvider;
         _textFileLoader = textFileLoader;
         _schedulerProvider = schedulerProvider;
+        _templateReader = templateReader;
         _factory = new DockFactory();
         Layout = _factory.CreateLayout();
         if (Layout is not null) _factory.InitLayout(Layout);
-        _factory.DockableClosed += (sender, args) =>
+        _factory.DockableClosed += (_, args) =>
         {
             if (args.Dockable is LogViewModel logViewModel)
                 _openFiles.Remove(logViewModel.FilePath);
         };
-        
+
         _fileSystemChangedObserverFactory = new FileSystemChangedObserverFactory(fileSystemObserverFactory);
 
         // Load state from last application use
@@ -62,12 +65,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
             .Do(state =>
             {
                 AppendFromBottom = state.AppendFromBottom;
-                
+
                 foreach (var filePath in state.LastOpenFiles)
                 {
                     try
                     {
-                        AddFileViewModel(OpenFileViewModel(filePath));
+                        AddToDock(CreateLogViewModel(filePath));
                     }
                     catch (Exception e)
                     {
@@ -79,23 +82,52 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
             .DisposeWith(_disposables);
     }
 
+    public void Drop(object? sender, DragEventArgs e)
+    {
+        if (!e.Data.Contains(DataFormats.Files)) return;
+        var result = e.Data.GetFiles();
+        e.Handled = true;
+        if (result is null) return;
+
+        _ = OpenFilesFromPath(result.Where(item => item is IStorageFile).Cast<IStorageFile>(), default);
+    }
 
     [RelayCommand]
     private async Task OpenFile(CancellationToken token)
     {
+        var files = await DoOpenFilePickerAsync();
+        await OpenFilesFromPath(files, token);
+    }
+
+    public void Dispose() => _disposables.Dispose();
+
+    private async Task OpenFilesFromPath(IEnumerable<IStorageFile> files, CancellationToken token)
+    {
         ErrorMessages?.Clear();
         try
         {
-            var files = await DoOpenFilePickerAsync();
-            foreach (var file in files)
-                AddFileViewModel(OpenFileViewModel(file.Path.LocalPath));
+            foreach (var givenFilePath in files.Select(file => file.Path.LocalPath))
+            {
+                var filePaths = await GetAllFilePathAsync(givenFilePath, token);
+                foreach (var filePath in filePaths)
+                    AddToDock(CreateLogViewModel(filePath));
+            }
         }
         catch (Exception e)
         {
             ErrorMessages?.Add(e.Message);
         }
     }
-    
+
+    private async Task<IReadOnlyList<string>> GetAllFilePathAsync(string givenFilePath, CancellationToken cancellationToken)
+    {
+        if (!_templateReader.IsTemplateFile(givenFilePath))
+            return [givenFilePath];
+
+        var template = await _templateReader.ReadAsync(givenFilePath, cancellationToken);
+        return template == null ? [] : template.Files;
+    }
+
     private Task<IReadOnlyList<IStorageFile>> DoOpenFilePickerAsync() =>
         _storageProvider
             .OpenFilePickerAsync(new FilePickerOpenOptions
@@ -104,7 +136,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
                 AllowMultiple = true
             });
 
-    private LogViewModel OpenFileViewModel(string path)
+    private LogViewModel CreateLogViewModel(string path)
     {
         _openFiles.Add(path);
 
@@ -114,7 +146,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
             appendFromBottom: AppendFromBottom);
     }
 
-    private void AddFileViewModel(LogViewModel logViewModel)
+    private void AddToDock(IDockable logViewModel)
     {
         var files = _factory.GetDockable<IDocumentDock>("Files");
         if (Layout is null || files is null) return;
@@ -128,9 +160,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
     {
         if (Layout is not IDock dock) return;
         if (dock.Close.CanExecute(null))
-        {
             dock.Close.Execute(null);
-        }
     }
 
     public void DragOver(object? sender, DragEventArgs e)
@@ -138,27 +168,5 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
         if (e.Data.Contains(DataFormats.Files)) return;
         e.DragEffects = DragDropEffects.None;
         e.Handled = true;
-    }
-
-    public void Drop(object? sender, DragEventArgs e)
-    {
-        if (!e.Data.Contains(DataFormats.Files)) return;
-        var result = e.Data.GetFiles();
-        if (result is not null)
-        {
-            foreach (var item in result)
-            {
-                if (item is not IStorageFile storageFile) continue;
-                var openFileViewModel = OpenFileViewModel(storageFile.Path.LocalPath);
-                AddFileViewModel(openFileViewModel);
-            }
-        }
-
-        e.Handled = true;
-    }
-    
-    public void Dispose()
-    {
-        _disposables.Dispose();
     }
 }
