@@ -1,110 +1,88 @@
-﻿using System.Reactive.Concurrency;
-using Microsoft.Reactive.Testing;
+﻿using Microsoft.Reactive.Testing;
 using NSubstitute;
 using Shouldly;
 using SpeleoLogViewer.Service;
-using SpeleoLogViewer.ViewModels;
 
 namespace SpeleologTest;
 
 public class FileSystemChangedObserverShould
 {
+    private readonly TimeSpan _throttleDurationPlusOne = FileChangedObservableFactory.ThrottleDuration + TimeSpan.FromMilliseconds(1);
+
     [Fact]
     public async Task EmitOnFileChangedIntegration()
     {
-        //var scheduler = new TestScheduler();
-        var actual = Array.Empty<string>();
+        var actual = 0;
         var filePath = Utils.CreateUniqueEmptyFile();
-
-        var fileContentObserverProvider = new FileSystemChangedObserverFactory(directoryPath => new FileSystemChangedWatcher(directoryPath));
-        var disposable = fileContentObserverProvider
-            .GetObservable(filePath, new TextFileLoaderInOneRead(), Scheduler.Default)
-            .Subscribe(strings => actual = strings.ToArray());
+        var scheduler = new TestScheduler();
+        var factory = new FileChangedObservableFactory(directoryPath => new FileSystemChangedWatcher(directoryPath));
+        var disposable = factory
+            .BuildFileChangedObservable(filePath, scheduler)
+            .Subscribe(_ => actual++);
         
         await File.AppendAllLinesAsync(filePath, ["a"]);
-        await Task.Delay(FileSystemChangedObserverFactory.ThrottleDuration + TimeSpan.FromMilliseconds(1 + 50)); // 1 for throttle, 50 for file loading
-        await Task.Delay(TimeSpan.FromMilliseconds(50));
+        scheduler.AdvanceBy(_throttleDurationPlusOne.Ticks + 1);
 
+        actual.ShouldBe(1);
+        
+        // Clean resources
         disposable.Dispose();
         File.Delete(filePath);
-        actual.ShouldBe(["a"]);
-
     }
 
     [Fact]
     public void EmitOnFileChanged()
     {
         var scheduler = new TestScheduler();
-        var actual = Array.Empty<string>();
-        var file = new FileTest(Array.Empty<string>());
+        var actual = 0;
+        var file = new FileTest();
         var fileSystemObserver = Substitute.For<IFileSystemChangedWatcher>();
-        var fileContentObserverProvider = new FileSystemChangedObserverFactory(_ => fileSystemObserver);
-        var sut = fileContentObserverProvider.GetObservable(file.Name, new TextFileLoaderForTest((_, _) => file.GetTextAsync()), scheduler);
-        sut.Subscribe(strings => actual = strings.ToArray());
+        var factory = new FileChangedObservableFactory(_ => fileSystemObserver);
+        var sut = factory.BuildFileChangedObservable(file.Name, scheduler);
+        sut.Subscribe(_ => actual++);
+        
+        RaiseChangedEvent(fileSystemObserver, file.Name);
+        scheduler.AdvanceBy(_throttleDurationPlusOne.Ticks);
 
-        scheduler.Schedule(() =>
-        {
-            file
-                .AddLine("A")
-                .AddLine("B");
-
-            RaiseChangedEvent(fileSystemObserver, file.Name);
-        });
-        scheduler.AdvanceBy(TimeSpan.FromMilliseconds(501).Ticks);
-
-        actual.ShouldBe(["A", "B"]);
+        actual.ShouldBe(1);
     }
 
     [Fact]
     public void NotEmitOnOtherFileChanged()
     {
         var scheduler = new TestScheduler();
-        var actual = Array.Empty<string>();
-        var file = new FileTest(Array.Empty<string>());
+        var actual = 0;
+        var file = new FileTest();
         var fileSystemObserver = Substitute.For<IFileSystemChangedWatcher>();
-        var fileContentObserverProvider = new FileSystemChangedObserverFactory(_ => fileSystemObserver);
-        var sut = fileContentObserverProvider.GetObservable(file.Name, new TextFileLoaderForTest((_, _) => file.GetTextAsync()), scheduler);
-        sut.Subscribe(strings => actual = strings.ToArray());
+        var fileContentObserverProvider = new FileChangedObservableFactory(_ => fileSystemObserver);
+        var sut = fileContentObserverProvider.BuildFileChangedObservable(file.Name, scheduler);
+        sut.Subscribe(_ => actual++);
 
-        scheduler.Schedule(() =>
-        {
-            file
-                .AddLine("A")
-                .AddLine("B");
+        RaiseChangedEvent(fileSystemObserver, "otherFile.txt");
+        scheduler.AdvanceBy(_throttleDurationPlusOne.Ticks);
 
-            RaiseChangedEvent(fileSystemObserver, "otherFile.txt");
-        });
-
-        scheduler.AdvanceBy(TimeSpan.FromMilliseconds(501).Ticks);
-
-        actual.ShouldBe(Array.Empty<string>());
+        actual.ShouldBe(0);
     }
 
     [Fact]
     public void ThrottleChangedEvent()
     {
-        var actual = Array.Empty<string>();
-        var file = new FileTest(Array.Empty<string>());
+        var actual = 0;
+        var file = new FileTest();
         var scheduler = new TestScheduler();
         var fileSystemObserver = Substitute.For<IFileSystemChangedWatcher>();
-        var fileContentObserverProvider = new FileSystemChangedObserverFactory(_ => fileSystemObserver);
-        var sut = fileContentObserverProvider.GetObservable(file.Name, new TextFileLoaderForTest((_, _) => file.GetTextAsync()), scheduler);
-        sut.Subscribe(strings => actual = strings.ToArray());
+        var fileContentObserverProvider = new FileChangedObservableFactory(_ => fileSystemObserver);
+        var sut = fileContentObserverProvider.BuildFileChangedObservable(file.Name, scheduler);
+        sut.Subscribe(_ => actual++);
 
         for (var i = 0; i < 10; i++)
         {
-            scheduler.Schedule(() =>
-            {
-                file.AddLine("A");
-                RaiseChangedEvent(fileSystemObserver, file.Name);
-            });
+            RaiseChangedEvent(fileSystemObserver, file.Name);
             scheduler.AdvanceBy(1);
         }
+        scheduler.AdvanceBy(_throttleDurationPlusOne.Ticks);
 
-        scheduler.AdvanceBy(TimeSpan.FromMilliseconds(501).Ticks);
-
-        actual.ShouldBe(Enumerable.Range(0, 10).Select(_ => "A"));
-        file.NbCall.ShouldBe(2); // initial call + 1 call 500ms after last event
+        actual.ShouldBe(1); // 1 call 500ms after last event
     }
 
     private static void RaiseChangedEvent(IFileSystemChangedWatcher fileSystemChangedWatcher, string? filePath)
@@ -114,23 +92,8 @@ public class FileSystemChangedObserverShould
             new FileSystemEventArgs(WatcherChangeTypes.Changed, "", filePath));
     }
 
-    private class FileTest(IEnumerable<string> lines)
+    private record FileTest
     {
-        private readonly List<string> _lines = lines.ToList();
-
-        public int NbCall { get; private set; }
         public string Name { get; } = $"{Guid.NewGuid()}.txt";
-
-        public FileTest AddLine(string line)
-        {
-            _lines.Add(line);
-            return this;
-        }
-
-        public Task<IEnumerable<string>> GetTextAsync()
-        {
-            NbCall++;
-            return Task.FromResult(_lines.AsEnumerable());
-        }
     }
 }

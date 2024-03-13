@@ -1,51 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
-using System.Threading;
-using SpeleoLogViewer.ViewModels;
 
 namespace SpeleoLogViewer.Service;
 
-public class FileSystemChangedObserverFactory(Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory)
+public class FileChangedObservableFactory(Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory)
 {
     private readonly Dictionary<string, IObservable<FileSystemEventArgs>> _dictionary = [];
     public static readonly TimeSpan ThrottleDuration = TimeSpan.FromMilliseconds(500);
 
-    public IObservable<IEnumerable<string>> GetObservable(
+    public IObservable<Unit> BuildFileChangedObservable(
         string filePath,
-        ITextFileLoader textFileLoader,
         IScheduler? scheduler = null)
     {
-        var directoryPath = Path.GetDirectoryName(filePath) ??
-                            throw new InvalidOperationException($"Impossible de trouver le repertoir du fichier {filePath}");
+        var directoryPath = Path.GetDirectoryName(filePath) ?? throw new InvalidOperationException($"Impossible de trouver le repertoir du fichier {filePath}");
         var fileName = Path.GetFileName(filePath);
 
         var taskpoolScheduler = scheduler ?? Scheduler.Default;
-        return GetDirectoryChangedObservable(directoryPath, taskpoolScheduler)
-            .Where(args => string.Equals(args.Name, fileName, StringComparison.InvariantCultureIgnoreCase))
-            .Select(_ => Unit.Default)
-            .StartWith(Unit.Default)
-            .Select(_ => Observable.FromAsync(async () =>
-            {
-                var sw = new Stopwatch();
-                sw.Start();
-
-                var textAsync = await textFileLoader.GetTextAsync(filePath, CancellationToken.None);
-
-                sw.Stop();
-                Console.WriteLine(sw.ElapsedMilliseconds);
-
-                return textAsync;
-            }, taskpoolScheduler))
-            .Concat();
+        return GetOrCreateDirectoryChangedObservable(directoryPath, taskpoolScheduler)
+                .Where(args => string.Equals(args.Name, fileName, StringComparison.InvariantCultureIgnoreCase))
+                .Select(_ => Unit.Default);
     }
 
-    private IObservable<FileSystemEventArgs> GetDirectoryChangedObservable(string directoryPath, IScheduler scheduler)
+    private IObservable<FileSystemEventArgs> GetOrCreateDirectoryChangedObservable(string directoryPath, IScheduler scheduler)
     {
         var key = _dictionary.Keys.FirstOrDefault(directoryPath.Contains);
 

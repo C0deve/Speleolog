@@ -26,7 +26,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
     private readonly ISchedulerProvider _schedulerProvider;
     private readonly ISpeleologTemplateReader _templateReader;
     private readonly DockFactory _factory;
-    private readonly FileSystemChangedObserverFactory _fileSystemChangedObserverFactory;
+    private readonly FileChangedObservableFactory _fileChangedObservableFactory;
 
     [ObservableProperty] private IRootDock? _layout;
 
@@ -55,7 +55,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
                 _openFiles.Remove(logViewModel.FilePath);
         };
 
-        _fileSystemChangedObserverFactory = new FileSystemChangedObserverFactory(fileSystemObserverFactory);
+        _fileChangedObservableFactory = new FileChangedObservableFactory(fileSystemObserverFactory);
 
         // Load state from last application use
         Observable
@@ -142,8 +142,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
 
         return new LogViewModel(
             filePath: path,
-            fileChangedStream: _fileSystemChangedObserverFactory.GetObservable(path, _textFileLoader, _schedulerProvider.Default),
-            appendFromBottom: AppendFromBottom);
+            fileChangedStream: _fileChangedObservableFactory.BuildFileChangedObservable(path, _schedulerProvider.Default),
+            appendFromBottom: AppendFromBottom,
+            _textFileLoader);
     }
 
     private void AddToDock(IDockable logViewModel)

@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
+using System.Reactive;
+using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Mvvm.Controls;
 
@@ -14,7 +18,7 @@ public partial class LogViewModel : Document, IDisposable
     private readonly CompositeDisposable _disposables = [];
 
     [ObservableProperty] private string _maskText = string.Empty;
-    
+
     [ObservableProperty] private string _filter = string.Empty;
     private readonly HashSet<LogLineViewModel> _original = new();
 
@@ -25,27 +29,51 @@ public partial class LogViewModel : Document, IDisposable
     public ObservableCollection<LogLineViewModel> AllLines { get; } = [];
 
     /// <inheritdoc/>
-    public LogViewModel(string filePath, IObservable<IEnumerable<string>> fileChangedStream, bool appendFromBottom)
+    public LogViewModel(
+        string filePath,
+        IObservable<Unit> fileChangedStream,
+        bool appendFromBottom,
+        ITextFileLoader textFileLoader,
+        IScheduler? scheduler = null)
     {
         FilePath = filePath;
         Title = System.IO.Path.GetFileName(FilePath);
 
-        var firstLines = fileChangedStream
-                .Take(1)
-                .SelectMany(lines => lines)
-                .Select(line => new LogLineViewModel(line));
+        var taskpoolScheduler = scheduler ?? Scheduler.Default;
 
-        var justAppend = fileChangedStream
+        var allLinesStream =
+            fileChangedStream
+                .StartWith(Unit.Default) // for triggering first load
+                .Select(_ => Observable.FromAsync(async () =>
+                {
+                    var sw = new Stopwatch();
+                    sw.Start();
+
+                    var textAsync = await textFileLoader.GetTextAsync(filePath, CancellationToken.None);
+
+                    sw.Stop();
+                    Console.WriteLine(sw.ElapsedMilliseconds);
+
+                    return textAsync;
+                }, taskpoolScheduler))
+                .Concat();
+
+        var firstLines = allLinesStream
+            .Take(1)
+            .SelectMany(lines => lines)
+            .Select(line => new LogLineViewModel(line));
+
+        var justAppend = allLinesStream
             .Skip(1)
             .SelectMany(lines => lines.Skip(AllLines.Count))
             .Select(line => new LogLineViewModel(line, true));
-        
+
         firstLines
             .Merge(justAppend)
             .Do(AddLine)
             .Subscribe(_ => { }, exception => Console.WriteLine(exception))
             .DisposeWith(_disposables);
-        
+
         AppendFromBottom = appendFromBottom;
     }
 
@@ -64,10 +92,10 @@ public partial class LogViewModel : Document, IDisposable
 
     partial void OnMaskTextChanged(string value)
     {
-        foreach (var logLineViewModel in _original) 
+        foreach (var logLineViewModel in _original)
             logLineViewModel.Mask(value);
     }
-    
+
     partial void OnFilterChanged(string _)
     {
         AllLines.Clear();
@@ -76,15 +104,15 @@ public partial class LogViewModel : Document, IDisposable
 
     private void Display(LogLineViewModel lineVM)
     {
-        if(IsFiltered(lineVM))
+        if (IsFiltered(lineVM))
             return;
-        
-        if(AppendFromBottom)
+
+        if (AppendFromBottom)
             AllLines.Add(lineVM);
         else
             AllLines.Insert(0, lineVM);
     }
 
-    private  bool IsFiltered(LogLineViewModel model) => 
+    private bool IsFiltered(LogLineViewModel model) =>
         !string.IsNullOrWhiteSpace(Filter) && !model.Text.Contains(Filter, StringComparison.InvariantCultureIgnoreCase);
 }

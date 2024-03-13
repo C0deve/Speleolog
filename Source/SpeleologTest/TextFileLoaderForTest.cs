@@ -2,7 +2,10 @@
 
 namespace SpeleologTest;
 
-public class TextFileLoaderForTest(Func<string, CancellationToken, Task<IEnumerable<string>>> getTextAsync) : ITextFileLoader
+public class TextFileLoaderForTest(Func<string, IEnumerable<string>> getText) : ITextFileLoader
 {
-    public Task<IEnumerable<string>> GetTextAsync(string filePath, CancellationToken cancellationToken) => getTextAsync(filePath, cancellationToken);
+    public TextFileLoaderForTest(IEnumerable<string> text) : this(_ => text) { }
+    
+    public Task<IEnumerable<string>> GetTextAsync(string filePath, CancellationToken cancellationToken) => 
+        Task.FromResult(getText(filePath));
 }
