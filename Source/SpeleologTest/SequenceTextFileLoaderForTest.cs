@@ -6,9 +6,11 @@ public class SequenceTextFileLoaderForTest(params IEnumerable<string>[] texts) :
 {
     private int _count = -1; 
     
-    public Task<IEnumerable<string>> GetTextAsync(string filePath, CancellationToken cancellationToken)
+    public Task<string> GetTextAsync(string filePath, CancellationToken cancellationToken)
     {
         _count++;
-        return Task.FromResult(_count < texts.Length ? texts[_count] : texts.Last());
+        return Task.FromResult(
+            string.Join(Environment.NewLine,
+            _count < texts.Length ? texts[_count] : texts.Last()));
     }
 }

@@ -36,6 +36,7 @@ public partial class LogViewModel : Document, IDisposable
         ITextFileLoader textFileLoader,
         IScheduler? scheduler = null)
     {
+        AppendFromBottom = appendFromBottom;
         FilePath = filePath;
         Title = System.IO.Path.GetFileName(FilePath);
 
@@ -48,13 +49,14 @@ public partial class LogViewModel : Document, IDisposable
                 {
                     var sw = new Stopwatch();
                     sw.Start();
-
-                    var textAsync = await textFileLoader.GetTextAsync(filePath, CancellationToken.None);
+                    
+                    var allText = await textFileLoader.GetTextAsync(filePath, CancellationToken.None);
 
                     sw.Stop();
                     Console.WriteLine(sw.ElapsedMilliseconds);
-
-                    return textAsync;
+                    
+                    var lines = allText.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+                    return lines;
                 }, taskpoolScheduler))
                 .Concat();
 
@@ -77,17 +79,17 @@ public partial class LogViewModel : Document, IDisposable
         AppendFromBottom = appendFromBottom;
     }
 
+    public void Dispose()
+    {
+        _disposables.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
     private void AddLine(LogLineViewModel lineVM)
     {
         lineVM.Mask(MaskText);
         _original.Add(lineVM);
         Display(lineVM);
-    }
-
-    public void Dispose()
-    {
-        _disposables.Dispose();
-        GC.SuppressFinalize(this);
     }
 
     partial void OnMaskTextChanged(string value)
