@@ -1,6 +1,6 @@
 ﻿using Avalonia.Input;
 
-namespace SpeleoLogViewer.ViewModels;
+namespace SpeleoLogViewer._BaseClass;
 
 public interface IDropTarget
 {

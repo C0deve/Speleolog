@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace SpeleoLogViewer.Service;
+namespace SpeleoLogViewer.FileChanged;
 
 public sealed class FileSystemChangedWatcher : IFileSystemChangedWatcher
 {

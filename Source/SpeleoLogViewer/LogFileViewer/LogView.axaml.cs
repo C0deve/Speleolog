@@ -1,8 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
-using SpeleoLogViewer.ViewModels;
 
-namespace SpeleoLogViewer.Views;
+namespace SpeleoLogViewer.LogFileViewer;
 
 public partial class LogView : UserControl
 {

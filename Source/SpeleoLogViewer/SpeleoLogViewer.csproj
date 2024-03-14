@@ -44,7 +44,11 @@
 
 
     <ItemGroup>
-      <Compile Update="Views\LogView.axaml.cs">
+      <Compile Update="Main\MainWindow.axaml.cs">
+        <DependentUpon>MainWindow.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="LogFile\LogView.axaml.cs">
         <DependentUpon>LogView.axaml</DependentUpon>
         <SubType>Code</SubType>
       </Compile>

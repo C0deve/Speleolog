@@ -11,11 +11,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Controls;
 using Dock.Model.Core;
 using ReactiveUI;
-using SpeleoLogViewer.Models;
-using SpeleoLogViewer.Service;
+using SpeleoLogViewer._BaseClass;
+using SpeleoLogViewer.ApplicationState;
+using SpeleoLogViewer.FileChanged;
+using SpeleoLogViewer.LogFileViewer;
 using SpeleoLogViewer.SpeleologTemplate;
 
-namespace SpeleoLogViewer.ViewModels;
+namespace SpeleoLogViewer.Main;
 
 public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, IDisposable
 {

@@ -1,7 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace SpeleoLogViewer.ViewModels;
+namespace SpeleoLogViewer._BaseClass;
 
 public partial class ViewModelBase : ObservableObject
 {

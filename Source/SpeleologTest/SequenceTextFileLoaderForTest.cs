@@ -1,4 +1,4 @@
-﻿using SpeleoLogViewer.ViewModels;
+﻿using SpeleoLogViewer.LogFileViewer;
 
 namespace SpeleologTest;
 

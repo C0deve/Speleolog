@@ -2,8 +2,8 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using SpeleoLogViewer.Models;
-using SpeleoLogViewer.Views;
+using SpeleoLogViewer.ApplicationState;
+using MainWindow = SpeleoLogViewer.Main.MainWindow;
 
 namespace SpeleoLogViewer;
 

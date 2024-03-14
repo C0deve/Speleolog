@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Reactive.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using SpeleoLogViewer._BaseClass;
 
-namespace SpeleoLogViewer.ViewModels;
+namespace SpeleoLogViewer.LogFileViewer;
 
 public partial class LogLineViewModel : ViewModelBase, IDisposable
 {

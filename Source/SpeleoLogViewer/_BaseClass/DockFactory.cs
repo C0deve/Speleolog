@@ -6,7 +6,7 @@ using Dock.Model.Core;
 using Dock.Model.Mvvm;
 using Dock.Model.Mvvm.Controls;
 
-namespace SpeleoLogViewer.ViewModels;
+namespace SpeleoLogViewer._BaseClass;
 
 public class DockFactory : Factory
 {

@@ -11,7 +11,7 @@ using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Mvvm.Controls;
 
-namespace SpeleoLogViewer.ViewModels;
+namespace SpeleoLogViewer.LogFileViewer;
 
 public partial class LogViewModel : Document, IDisposable
 {

@@ -2,12 +2,12 @@
     d:DesignHeight="400"
     d:DesignWidth="300"
     mc:Ignorable="d"
-    x:Class="SpeleoLogViewer.Views.LogView"
-    x:DataType="viewModels:LogViewModel"
+    x:Class="SpeleoLogViewer.LogFileViewer.LogView"
+    x:DataType="logFileViewer:LogViewModel"
     xmlns="https://github.com/avaloniaui"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:logFileViewer="clr-namespace:SpeleoLogViewer.LogFileViewer"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:viewModels="clr-namespace:SpeleoLogViewer.ViewModels"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Grid RowDefinitions="*,Auto">
         <Grid.Resources>

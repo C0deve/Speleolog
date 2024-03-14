@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace SpeleoLogViewer.Models;
+namespace SpeleoLogViewer.ApplicationState;
 
 public interface ISpeleologStateRepository
 {

@@ -6,7 +6,7 @@ using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 
-namespace SpeleoLogViewer.Service;
+namespace SpeleoLogViewer.FileChanged;
 
 public class FileChangedObservableFactory(Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory)
 {

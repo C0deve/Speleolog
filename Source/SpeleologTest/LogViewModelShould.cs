@@ -3,7 +3,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Microsoft.Reactive.Testing;
 using Shouldly;
-using SpeleoLogViewer.ViewModels;
+using SpeleoLogViewer.LogFileViewer;
 
 namespace SpeleologTest;
 

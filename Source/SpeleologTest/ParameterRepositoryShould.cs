@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using Shouldly;
-using SpeleoLogViewer.Models;
+using SpeleoLogViewer.ApplicationState;
 
 namespace SpeleologTest;
 

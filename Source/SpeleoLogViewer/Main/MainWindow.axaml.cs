@@ -1,11 +1,12 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using SpeleoLogViewer.Models;
-using SpeleoLogViewer.Service;
+using SpeleoLogViewer._BaseClass;
+using SpeleoLogViewer.ApplicationState;
+using SpeleoLogViewer.FileChanged;
+using SpeleoLogViewer.LogFileViewer;
 using SpeleoLogViewer.SpeleologTemplate;
-using SpeleoLogViewer.ViewModels;
 
-namespace SpeleoLogViewer.Views;
+namespace SpeleoLogViewer.Main;
 
 public partial class MainWindow : Window
 {

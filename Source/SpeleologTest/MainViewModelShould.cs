@@ -3,10 +3,10 @@ using Avalonia.Platform.Storage;
 using Dock.Model.Mvvm.Controls;
 using NSubstitute;
 using Shouldly;
-using SpeleoLogViewer.Models;
-using SpeleoLogViewer.Service;
+using SpeleoLogViewer.ApplicationState;
+using SpeleoLogViewer.FileChanged;
+using SpeleoLogViewer.Main;
 using SpeleoLogViewer.SpeleologTemplate;
-using SpeleoLogViewer.ViewModels;
 
 namespace SpeleologTest;
 

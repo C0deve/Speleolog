@@ -3,7 +3,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Core;
-using SpeleoLogViewer.ViewModels;
 
 namespace SpeleoLogViewer;
 

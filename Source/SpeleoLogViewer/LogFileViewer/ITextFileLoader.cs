@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace SpeleoLogViewer.ViewModels;
+namespace SpeleoLogViewer.LogFileViewer;
 
 public interface ITextFileLoader
 {

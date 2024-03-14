@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SpeleoLogViewer.ViewModels;
+namespace SpeleoLogViewer.LogFileViewer;
 
 public class TextFileLoaderLineByLine : ITextFileLoader
 {

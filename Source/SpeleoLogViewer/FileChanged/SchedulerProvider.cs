@@ -1,6 +1,6 @@
 ﻿using System.Reactive.Concurrency;
 
-namespace SpeleoLogViewer.Service;
+namespace SpeleoLogViewer.FileChanged;
 
 public class SchedulerProvider : ISchedulerProvider
 {
