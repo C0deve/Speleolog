@@ -4,6 +4,11 @@
     <option name="projectPerEditor">
       <map>
         <entry key="SpeleoLogViewer/App.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
+        <entry key="SpeleoLogViewer/LogFileViewer/Dockable/DockableLogFileView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
+        <entry key="SpeleoLogViewer/LogFileViewer/DockableLogFileView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
+        <entry key="SpeleoLogViewer/LogFileViewer/DockableLogFileViewerView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
+        <entry key="SpeleoLogViewer/LogFileViewer/DockableView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
+        <entry key="SpeleoLogViewer/LogFileViewer/LogFileViewerView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
         <entry key="SpeleoLogViewer/LogFileViewer/LogView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
         <entry key="SpeleoLogViewer/Main/MainWindow.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
         <entry key="SpeleoLogViewer/Views/Documents/FileView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />

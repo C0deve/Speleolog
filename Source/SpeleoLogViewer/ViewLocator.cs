@@ -10,7 +10,9 @@ public class ViewLocator : IDataTemplate
 {
     public Control Build(object? data)
     {
-        var name = data?.GetType().FullName?.Replace("ViewModel", "View");
+        var name = data?.GetType().FullName?
+            .Replace("ViewModel", "View")
+            .Replace("VM", "View");
         if (name is null)
             return new TextBlock { Text = "Invalid Data Type" };
         

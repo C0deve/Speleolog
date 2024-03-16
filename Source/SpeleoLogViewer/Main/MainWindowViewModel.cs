@@ -15,6 +15,7 @@ using SpeleoLogViewer._BaseClass;
 using SpeleoLogViewer.ApplicationState;
 using SpeleoLogViewer.FileChanged;
 using SpeleoLogViewer.LogFileViewer;
+using SpeleoLogViewer.LogFileViewer.Dockable;
 using SpeleoLogViewer.SpeleologTemplate;
 
 namespace SpeleoLogViewer.Main;
@@ -53,8 +54,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
         if (Layout is not null) _factory.InitLayout(Layout);
         _factory.DockableClosed += (_, args) =>
         {
-            if (args.Dockable is LogViewModel logViewModel)
-                _openFiles.Remove(logViewModel.FilePath);
+            if (args.Dockable is DockableLogFileVM logViewModel)
+                _openFiles.Remove(logViewModel.LogFileViewerVM.FilePath);
         };
 
         _fileChangedObservableFactory = new FileChangedObservableFactory(fileSystemObserverFactory);
@@ -138,15 +139,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
                 AllowMultiple = true
             });
 
-    private LogViewModel CreateLogViewModel(string path)
+    private DockableLogFileVM CreateLogViewModel(string path)
     {
         _openFiles.Add(path);
-
-        return new LogViewModel(
+        return new DockableLogFileVM(new LogFileViewerVM(
             filePath: path,
             fileChangedStream: _fileChangedObservableFactory.BuildFileChangedObservable(path, _schedulerProvider.Default),
-            appendFromBottom: AppendFromBottom,
-            _textFileLoader);
+            _textFileLoader,
+            RxApp.MainThreadScheduler));
     }
 
     private void AddToDock(IDockable logViewModel)
