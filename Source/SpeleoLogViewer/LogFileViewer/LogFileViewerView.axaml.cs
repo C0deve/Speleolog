@@ -15,7 +15,7 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
     private IDisposable? _refreshAllSubscription;
 
     public SelectableTextBlock? LogFileContent => this.FindControl<SelectableTextBlock>("LogContent");
-    
+
     public LogFileViewerView()
     {
         InitializeComponent();
@@ -40,22 +40,25 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
             .Do(AddTimerToRemoveClass)
             .Do(PushChangesToSelectableTextBox)
             .Subscribe();
-    
-    private IDisposable? SubscribeToRefreshAll()
-    {
-        return ViewModel?
+
+    private IDisposable? SubscribeToRefreshAll() =>
+        ViewModel?
             .RefreshAllStream
             .ObserveOn(RxApp.MainThreadScheduler)
-            .Select(s => new Run(s))
             .Do(_ => LogFileContent?.Inlines?.Clear())
+            .Select(s => new Run(s))
             .Do(PushChangesToSelectableTextBox)
             .Subscribe();
-    }
 
-    private void PushChangesToSelectableTextBox(Run inline) =>
-        LogFileContent?
+    private void PushChangesToSelectableTextBox(Run inline)
+    {
+        using (new Watcher($"PushToSelectableTextBox {inline.Text!.Length}"))
+        {
+            LogFileContent?
                 .Inlines?
                 .Insert(0, inline);
+        }
+    }
 
     private void AddTimerToRemoveClass(Run inline) =>
         Observable

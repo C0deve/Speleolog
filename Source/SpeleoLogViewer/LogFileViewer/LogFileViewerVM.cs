@@ -25,7 +25,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
     public IObservable<string> RefreshAllStream { get; }
     [Reactive] public string Filter { get; set; }
     [Reactive] public string MaskText { get; set; }
-    
+
     public LogFileViewerVM(
         string filePath,
         IObservable<Unit> fileChangedStream,
@@ -35,7 +35,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
         Filter = string.Empty;
         MaskText = string.Empty;
         FilePath = filePath;
-        var taskpoolScheduler = scheduler ?? RxApp.MainThreadScheduler;
+        var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
 
         ChangesStream = _changes.AsObservable();
         RefreshAllStream = _refreshAll.AsObservable();
@@ -44,7 +44,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler) // File loading on creation
                 .Do(input => _actualText = input)
                 .Publish();
-        
+
         var changesFromFileSystemStream = fileChangedStream // changes fromm file system stream
             .SkipUntil(firstFileContentLoading)
             .Select(_ => LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler))
@@ -65,7 +65,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .Subscribe(_changes)
             .DisposeWith(_disposable);
-        
+
         var filterStream =
             this.WhenAnyValue(vm => vm.Filter)
                 .SkipUntil(firstFileContentLoading)
@@ -83,6 +83,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .Merge(filterStream)
             .Merge(textMaskStream)
             .Select(Reverse)
+            .Select(s => Take(300, s))
             .Subscribe(_refreshAll)
             .DisposeWith(_disposable);
 
@@ -95,32 +96,54 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .DisposeWith(_disposable);
     }
 
+    private static string Take(int lineCount, string actualText)
+    {
+        using (new Watcher("Take"))
+        {
+            return actualText
+                .Split(Environment.NewLine)
+                .Take(lineCount)
+                .Join(Environment.NewLine);
+        }
+    }
+
     private static string DoMaskText(string mask, string actualText)
     {
-        if (string.IsNullOrWhiteSpace(mask))
-            return actualText;
+        using (new Watcher("Mask"))
+        {
+            if (string.IsNullOrWhiteSpace(mask))
+                return actualText;
 
-        var maskedLines = actualText
-            .Split(Environment.NewLine)
-            .Select(line => line.Replace(mask, string.Empty, StringComparison.InvariantCultureIgnoreCase));
-
-        return string.Join(Environment.NewLine, maskedLines);
+            return actualText
+                .Split(Environment.NewLine)
+                .Select(line => line.Replace(mask, string.Empty, StringComparison.InvariantCultureIgnoreCase))
+                .Join(Environment.NewLine);
+        }
     }
 
     private static string DoFilter(string filter, string actualText)
     {
-        if (string.IsNullOrWhiteSpace(filter))
-            return actualText;
+        using (new Watcher("Filter"))
+        {
+            if (string.IsNullOrWhiteSpace(filter))
+                return actualText;
 
-        var filteredLines = actualText
-            .Split(Environment.NewLine)
-            .Where(line => line.Contains(filter, StringComparison.InvariantCultureIgnoreCase));
-
-        return string.Join(Environment.NewLine, filteredLines);
+            return actualText
+                .Split(Environment.NewLine)
+                .Where(line => line.Contains(filter, StringComparison.InvariantCultureIgnoreCase))
+                .Join(Environment.NewLine);
+        }
     }
 
     private static IObservable<string> LoadFileContentAsync(string filePath, ITextFileLoader textFileLoader, IScheduler taskpoolScheduler) =>
-        Observable.FromAsync(async () => await textFileLoader.GetTextAsync(filePath, CancellationToken.None), taskpoolScheduler);
+        Observable.FromAsync(async () =>
+        {
+            using (new Watcher("File loading"))
+            {
+                return await textFileLoader.GetTextAsync(filePath, CancellationToken.None);
+            }
+        }, taskpoolScheduler);
+
 
     private static string Diff(Data input)
     {
@@ -132,10 +155,16 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             : string.Empty;
     }
 
-    private static string Reverse(string input) => input
-        .Split(Environment.NewLine)
-        .Reverse()
-        .Join(Environment.NewLine);
+    private static string Reverse(string input)
+    {
+        using (new Watcher("Reverse"))
+        {
+            return input
+                .Split(Environment.NewLine)
+                .Reverse()
+                .Join(Environment.NewLine);
+        }
+    }
 
     public void Dispose()
     {

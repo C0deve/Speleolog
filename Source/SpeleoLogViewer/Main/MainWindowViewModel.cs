@@ -146,7 +146,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
             filePath: path,
             fileChangedStream: _fileChangedObservableFactory.BuildFileChangedObservable(path, _schedulerProvider.Default),
             _textFileLoader,
-            RxApp.MainThreadScheduler));
+            RxApp.TaskpoolScheduler));
     }
 
     private void AddToDock(IDockable logViewModel)
