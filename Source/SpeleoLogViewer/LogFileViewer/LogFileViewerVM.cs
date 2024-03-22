@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Concurrency;
@@ -13,15 +14,14 @@ namespace SpeleoLogViewer.LogFileViewer;
 
 public sealed class LogFileViewerVM : ReactiveObject, IDisposable
 {
-    private readonly int _lineCountByPage;
     private readonly CompositeDisposable _disposable = new();
     private string _actualText = "";
     private readonly Subject<string> _changes = new();
     private readonly Subject<string> _pageChanges = new();
     private readonly BehaviorSubject<string> _refreshAll = new("");
     private readonly TimeSpan _throttleTime = TimeSpan.FromMilliseconds(500);
-    private int _displayStartIndex;
-    [Reactive]private short CurrentPage { get; set; } = 0;
+    private bool _allDataAreDisplayed;
+    [Reactive] private short CurrentPage { get; set; }
     public TimeSpan AnimationDuration { get; } = TimeSpan.FromSeconds(10);
     public string FilePath { get; }
     public IObservable<string> ChangesStream { get; }
@@ -29,6 +29,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
     public IObservable<string> PageChangesStream { get; }
     [Reactive] public string Filter { get; set; }
     [Reactive] public string MaskText { get; set; }
+
     public LogFileViewerVM(
         string filePath,
         IObservable<Unit> fileChangedStream,
@@ -36,8 +37,6 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
         int lineCountByPage,
         IScheduler? scheduler = null)
     {
-        _lineCountByPage = lineCountByPage;
-
         ChangesStream = _changes.AsObservable();
         RefreshAllStream = _refreshAll.AsObservable();
         PageChangesStream = _pageChanges.AsObservable();
@@ -54,7 +53,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
                 .Do(input => { _actualText = input; })
                 .Publish();
 
-        var changesFromFileSystemStream =
+        var fileContentStream =
             fileChangedStream // changes fromm file system stream
                 .SkipUntil(firstFileContentLoading)
                 .Select(_ => LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler))
@@ -62,47 +61,58 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
                 .Select(newText => new Data(newText, _actualText))
                 .Publish();
 
-        changesFromFileSystemStream // save new content stream
+        fileContentStream // save new content stream
             .Do(input => _actualText = input.NewText)
             .Subscribe()
             .DisposeWith(_disposable);
 
-        changesFromFileSystemStream // Changes stream
+        fileContentStream // Changes stream
             .Select(Diff)
+            .Select(Split)
             .Select(text => DoFilter(Filter, text))
             .Select(text => DoMaskText(MaskText, text))
             .Select(Reverse)
+            .Select(Join)
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .Select(s => s.EndsWith(Environment.NewLine) ? s : s + Environment.NewLine)
             .Subscribe(_changes)
             .DisposeWith(_disposable);
-
-
+        
         var filterOrMaskStream =
             this.WhenAnyValue(vm => vm.Filter, vm => vm.MaskText, (filter, mask) => (Filter: filter, Mask: mask))
                 .SkipUntil(firstFileContentLoading)
                 .Throttle(_throttleTime, taskpoolScheduler)
                 .DistinctUntilChanged()
-                .Select(data => (Text: DoFilter(data.Filter, _actualText), data.Mask))
+                .Select(data => (Text:Split(_actualText), data.Mask, data.Filter))
+                .Select(data => (Text: DoFilter(data.Filter, data.Text), data.Mask))
                 .Select(data => DoMaskText(data.Mask, data.Text));
 
-        firstFileContentLoading
+        firstFileContentLoading // Refresh all stream
+            .Select(Split)
             .Merge(filterOrMaskStream)
-            .Select(s => Take(lineCountByPage, s, CurrentPage))
+            .Do(_ => CurrentPage = 0)
+            .Select(text => TakeLast(lineCountByPage, text, 0))
             .Select(Reverse)
+            .Select(Join)
+            .Do(text => _allDataAreDisplayed = string.IsNullOrWhiteSpace(text))
             .Subscribe(_refreshAll)
             .DisposeWith(_disposable);
 
-        this.WhenAnyValue(vm => vm.CurrentPage)
+        this.WhenAnyValue(vm => vm.CurrentPage) // Pages stream
             .SkipUntil(firstFileContentLoading)
-            .Select(data => DoFilter(Filter, _actualText))
-            .Select(s => Take(_lineCountByPage, _actualText, CurrentPage))
+            .Where(page => page > 0)
+            .Select(page => (Text:Split(_actualText), NewPage:page))
+            .Select(data => (Text: DoFilter(Filter, data.Text), data.NewPage))
+            .Select(data => TakeLast(lineCountByPage, data.Text, data.NewPage))
             .Select(text => DoMaskText(MaskText, text))
             .Select(Reverse)
+            .Select(Join)
+            .Do(text => _allDataAreDisplayed = string.IsNullOrWhiteSpace(text))
+            .Where(_ => !_allDataAreDisplayed)
             .Subscribe(_pageChanges)
             .DisposeWith(_disposable);
-        
-        changesFromFileSystemStream
+
+        fileContentStream
             .Connect()
             .DisposeWith(_disposable);
 
@@ -113,45 +123,51 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
 
     public void DisplayNextPage()
     {
-        if (_displayStartIndex == 0) return;
+        if (_allDataAreDisplayed) return;
 
         CurrentPage++;
         Console.WriteLine($"{nameof(DisplayNextPage)} page:{CurrentPage}");
     }
 
-    private string Take(int lineCount, string actualText, int actualPageIndex)
+    private static string[] Split(string actualText)
     {
-        using (new Watcher("Take"))
+        using (new Watcher("Split"))
         {
-            var join = actualText
-                .Split(Environment.NewLine)
+           return actualText.Split(Environment.NewLine);
+        }
+    }
+    
+    private static string Join(IEnumerable<string> actualText)
+    {
+        using (new Watcher("Join"))
+        {
+            return actualText.Join(Environment.NewLine);
+        }
+    }
+    
+    private static IEnumerable<string> TakeLast(int lineCount, IEnumerable<string> actualText, int actualPageIndex)
+    {
+        using (new Watcher("TakeLast"))
+        {
+            return actualText
                 .SkipLast(lineCount * actualPageIndex)
-                .TakeLast(lineCount)
-                .Join(Environment.NewLine);
-
-            _displayStartIndex = actualText.Length - join.Length;
-            if (_displayStartIndex < 0)
-                _displayStartIndex = 0;
-
-            return join;
+                .TakeLast(lineCount);
         }
     }
 
-    private static string DoMaskText(string mask, string actualText)
+    private static IEnumerable<string> DoMaskText(string mask, IEnumerable<string> actualText)
     {
         using (new Watcher("Mask"))
         {
             if (string.IsNullOrWhiteSpace(mask))
                 return actualText;
 
-            return actualText
-                .Split(Environment.NewLine)
-                .Select(line => line.Replace(mask, string.Empty, StringComparison.InvariantCultureIgnoreCase))
-                .Join(Environment.NewLine);
+            return actualText.Select(line => 
+                line.Replace(mask, string.Empty, StringComparison.InvariantCultureIgnoreCase));
         }
     }
 
-    private static string DoFilter(string filter, string actualText)
+    private static IEnumerable<string> DoFilter(string filter, IEnumerable<string> actualText)
     {
         using (new Watcher("Filter"))
         {
@@ -159,9 +175,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
                 return actualText;
 
             return actualText
-                .Split(Environment.NewLine)
-                .Where(line => line.Contains(filter, StringComparison.InvariantCultureIgnoreCase))
-                .Join(Environment.NewLine);
+                .Where(line => line.Contains(filter, StringComparison.InvariantCultureIgnoreCase));
         }
     }
 
@@ -185,21 +199,15 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             : string.Empty;
     }
 
-    private static string Reverse(string input)
+    private static IEnumerable<string> Reverse(IEnumerable<string> input)
     {
         using (new Watcher("Reverse"))
         {
-            return input
-                .Split(Environment.NewLine)
-                .Reverse()
-                .Join(Environment.NewLine);
+            return input.Reverse();
         }
     }
 
-    public void Dispose()
-    {
-        _disposable.Dispose();
-    }
+    public void Dispose() => _disposable.Dispose();
 }
 
 internal record Data(string NewText, string ActualText);
