@@ -45,7 +45,8 @@
         <ScrollViewer
             AllowAutoHide="True"
             Grid.Row="0"
-            HorizontalScrollBarVisibility="Auto">
+            HorizontalScrollBarVisibility="Auto"
+            ScrollChanged="ScrollViewer_OnScrollChanged">
             <SelectableTextBlock Padding="0.5" x:Name="LogContent" />
         </ScrollViewer>
         <Grid ColumnDefinitions="Auto,0.5*,0.5*" Grid.Row="1">

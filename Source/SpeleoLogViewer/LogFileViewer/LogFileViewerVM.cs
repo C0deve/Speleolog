@@ -13,44 +13,54 @@ namespace SpeleoLogViewer.LogFileViewer;
 
 public sealed class LogFileViewerVM : ReactiveObject, IDisposable
 {
+    private readonly int _lineCountByPage;
     private readonly CompositeDisposable _disposable = new();
     private string _actualText = "";
     private readonly Subject<string> _changes = new();
+    private readonly Subject<string> _pageChanges = new();
     private readonly BehaviorSubject<string> _refreshAll = new("");
     private readonly TimeSpan _throttleTime = TimeSpan.FromMilliseconds(500);
-
+    private int _displayStartIndex;
+    [Reactive]private short CurrentPage { get; set; } = 0;
     public TimeSpan AnimationDuration { get; } = TimeSpan.FromSeconds(10);
     public string FilePath { get; }
     public IObservable<string> ChangesStream { get; }
     public IObservable<string> RefreshAllStream { get; }
+    public IObservable<string> PageChangesStream { get; }
     [Reactive] public string Filter { get; set; }
     [Reactive] public string MaskText { get; set; }
-
     public LogFileViewerVM(
         string filePath,
         IObservable<Unit> fileChangedStream,
         ITextFileLoader textFileLoader,
+        int lineCountByPage,
         IScheduler? scheduler = null)
     {
-        Filter = string.Empty;
-        MaskText = string.Empty;
-        FilePath = filePath;
-        var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
+        _lineCountByPage = lineCountByPage;
 
         ChangesStream = _changes.AsObservable();
         RefreshAllStream = _refreshAll.AsObservable();
+        PageChangesStream = _pageChanges.AsObservable();
+
+        Filter = string.Empty;
+        MaskText = string.Empty;
+        FilePath = filePath;
+
+        var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
+
 
         var firstFileContentLoading =
             LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler) // File loading on creation
-                .Do(input => _actualText = input)
+                .Do(input => { _actualText = input; })
                 .Publish();
 
-        var changesFromFileSystemStream = fileChangedStream // changes fromm file system stream
-            .SkipUntil(firstFileContentLoading)
-            .Select(_ => LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler))
-            .Concat()
-            .Select(newText => new Data(newText, _actualText))
-            .Publish();
+        var changesFromFileSystemStream =
+            fileChangedStream // changes fromm file system stream
+                .SkipUntil(firstFileContentLoading)
+                .Select(_ => LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler))
+                .Concat()
+                .Select(newText => new Data(newText, _actualText))
+                .Publish();
 
         changesFromFileSystemStream // save new content stream
             .Do(input => _actualText = input.NewText)
@@ -63,30 +73,35 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .Select(text => DoMaskText(MaskText, text))
             .Select(Reverse)
             .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s.EndsWith(Environment.NewLine) ? s : s + Environment.NewLine)
             .Subscribe(_changes)
             .DisposeWith(_disposable);
 
-        var filterStream =
-            this.WhenAnyValue(vm => vm.Filter)
+
+        var filterOrMaskStream =
+            this.WhenAnyValue(vm => vm.Filter, vm => vm.MaskText, (filter, mask) => (Filter: filter, Mask: mask))
                 .SkipUntil(firstFileContentLoading)
                 .Throttle(_throttleTime, taskpoolScheduler)
                 .DistinctUntilChanged()
-                .Select(filter => DoFilter(filter, _actualText));
-        var textMaskStream =
-            this.WhenAnyValue(vm => vm.MaskText)
-                .SkipUntil(firstFileContentLoading)
-                .Throttle(_throttleTime, taskpoolScheduler)
-                .DistinctUntilChanged()
-                .Select(mask => DoMaskText(mask, _actualText));
+                .Select(data => (Text: DoFilter(data.Filter, _actualText), data.Mask))
+                .Select(data => DoMaskText(data.Mask, data.Text));
 
         firstFileContentLoading
-            .Merge(filterStream)
-            .Merge(textMaskStream)
+            .Merge(filterOrMaskStream)
+            .Select(s => Take(lineCountByPage, s, CurrentPage))
             .Select(Reverse)
-            .Select(s => Take(300, s))
             .Subscribe(_refreshAll)
             .DisposeWith(_disposable);
 
+        this.WhenAnyValue(vm => vm.CurrentPage)
+            .SkipUntil(firstFileContentLoading)
+            .Select(data => DoFilter(Filter, _actualText))
+            .Select(s => Take(_lineCountByPage, _actualText, CurrentPage))
+            .Select(text => DoMaskText(MaskText, text))
+            .Select(Reverse)
+            .Subscribe(_pageChanges)
+            .DisposeWith(_disposable);
+        
         changesFromFileSystemStream
             .Connect()
             .DisposeWith(_disposable);
@@ -96,14 +111,29 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .DisposeWith(_disposable);
     }
 
-    private static string Take(int lineCount, string actualText)
+    public void DisplayNextPage()
+    {
+        if (_displayStartIndex == 0) return;
+
+        CurrentPage++;
+        Console.WriteLine($"{nameof(DisplayNextPage)} page:{CurrentPage}");
+    }
+
+    private string Take(int lineCount, string actualText, int actualPageIndex)
     {
         using (new Watcher("Take"))
         {
-            return actualText
+            var join = actualText
                 .Split(Environment.NewLine)
-                .Take(lineCount)
+                .SkipLast(lineCount * actualPageIndex)
+                .TakeLast(lineCount)
                 .Join(Environment.NewLine);
+
+            _displayStartIndex = actualText.Length - join.Length;
+            if (_displayStartIndex < 0)
+                _displayStartIndex = 0;
+
+            return join;
         }
     }
 

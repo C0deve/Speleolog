@@ -145,7 +145,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
         return new DockableLogFileVM(new LogFileViewerVM(
             filePath: path,
             fileChangedStream: _fileChangedObservableFactory.BuildFileChangedObservable(path, _schedulerProvider.Default),
-            _textFileLoader,
+            _textFileLoader, 100,
             RxApp.TaskpoolScheduler));
     }
 

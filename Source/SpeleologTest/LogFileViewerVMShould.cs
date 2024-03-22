@@ -19,7 +19,7 @@ public class LogFileViewerVMShould
         var scheduler = new TestScheduler();
         var text = string.Empty;
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new TextFileLoaderForTest(["A", "B", "C"]),
+            new TextFileLoaderForTest(["A", "B", "C"]), 300,
             scheduler);
 
         scheduler.AdvanceBy(OperationDelay.Ticks);
@@ -36,7 +36,7 @@ public class LogFileViewerVMShould
         var scheduler = new TestScheduler();
         var text = string.Empty;
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new SequenceTextFileLoaderForTest([""], lines),
+            new SequenceTextFileLoaderForTest([""], lines), 300,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks);  // file loading
         sut.ChangesStream.Subscribe(s => text = s);
@@ -44,7 +44,7 @@ public class LogFileViewerVMShould
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
-        text.ShouldBe(string.Join(Environment.NewLine, ["C", "B", "A"]));
+        text.ShouldBe(string.Join(Environment.NewLine, ["C", "B", "A", ""]));
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class LogFileViewerVMShould
         var scheduler = new TestScheduler();
         var text = string.Empty;
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new SequenceTextFileLoaderForTest(["A"], lines),
+            new SequenceTextFileLoaderForTest(["A"], lines), 300,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.ChangesStream.Subscribe(s => text = s);
@@ -73,7 +73,7 @@ public class LogFileViewerVMShould
         var text = string.Empty;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new TextFileLoaderForTest(["mask A", "B masK", "CMASK", "coucou"]),
+            new TextFileLoaderForTest(["mask A", "B masK", "CMASK", "coucou"]), 300,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks);  // file loading
         sut
@@ -93,7 +93,7 @@ public class LogFileViewerVMShould
         var text = string.Empty;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new SequenceTextFileLoaderForTest(["coucou"], ["coucou", "mask A", "B masK", "coucou", "CMASK"]),
+            new SequenceTextFileLoaderForTest(["coucou"], ["coucou", "mask A", "B masK", "coucou", "CMASK"]), 300,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks);  // file loading
         sut
@@ -105,7 +105,7 @@ public class LogFileViewerVMShould
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
-        text.ShouldBe(string.Join(Environment.NewLine, ["CMASK", "B masK", "mask A"]));
+        text.ShouldBe(string.Join(Environment.NewLine, ["CMASK", "B masK", "mask A", ""]));
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class LogFileViewerVMShould
         var text = string.Empty;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new TextFileLoaderForTest(["coucou", "mask A"]),
+            new TextFileLoaderForTest(["coucou", "mask A"]), 300,
             scheduler);
         sut.RefreshAllStream
             .Skip(1) // skip refresh from creation
@@ -130,13 +130,13 @@ public class LogFileViewerVMShould
     }
 
     [Fact]
-    public void EmitRefreshAllOnMaskTextChanged()
+    public void EmitRefreshAllOnMask()
     {
         var emitter = new Subject<Unit>();
         var text = string.Empty;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new TextFileLoaderForTest(["mask A", "B masK", "CMASK"]),
+            new TextFileLoaderForTest(["mask A", "B masK", "CMASK"]), 300,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks);  // file loading
         sut.RefreshAllStream
@@ -151,13 +151,35 @@ public class LogFileViewerVMShould
     }
     
     [Fact]
+    public void EmitRefreshAllOnMaskAndFilter()
+    {
+        var emitter = new Subject<Unit>();
+        var text = string.Empty;
+        var scheduler = new TestScheduler();
+        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
+            new TextFileLoaderForTest(["coucou", "filterA", "Mask B", "filterC Mask"]), 300,
+            scheduler);
+        scheduler.AdvanceBy(OperationDelay.Ticks);  // file loading
+        sut.RefreshAllStream
+            .Subscribe(s => text = s);
+        emitter.OnNext(Unit.Default);
+        scheduler.AdvanceBy(OperationDelay.Ticks);
+
+        sut.MaskText = "mask";
+        sut.Filter = "filter";
+        scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
+        
+        text.ShouldBe(string.Join(Environment.NewLine, ["filterC ", "filterA"]));
+    }
+    
+    [Fact]
     public void EmitMaskedChangesOnFileChanged()
     {
         var emitter = new Subject<Unit>();
         var text = string.Empty;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new SequenceTextFileLoaderForTest(["coucou"], ["coucou", "mask A", "B masK", "coucou", "CMASK"]),
+            new SequenceTextFileLoaderForTest(["coucou"], ["coucou", "mask A", "B masK", "coucou", "CMASK"]), 300,
             scheduler);
         sut.ChangesStream.Subscribe(s => text = s);
         sut.MaskText = "mask";
@@ -167,5 +189,43 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
         text.ShouldBe(string.Join(Environment.NewLine, ["C", "coucou", "B ", " A", ""]));
+    }
+    
+    [Fact]
+    public void EmitMaskedAndFilteredChangesOnFileChanged()
+    {
+        var emitter = new Subject<Unit>();
+        var text = string.Empty;
+        var scheduler = new TestScheduler();
+        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
+            new SequenceTextFileLoaderForTest(["coucou"], ["coucou", "filterA", "Mask filterB"]), 300,
+            scheduler);
+        sut.ChangesStream.Subscribe(s => text = s);
+        sut.MaskText = "mask";
+        sut.Filter = "filter";
+        scheduler.AdvanceBy(TimeSpan.FromMilliseconds(250).Ticks); // throttle time
+
+        emitter.OnNext(Unit.Default);
+        scheduler.AdvanceBy(OperationDelay.Ticks);
+
+        text.ShouldBe(string.Join(Environment.NewLine, [" filterB", "filterA", ""]));
+    }
+    
+    [Fact]
+    public void EmitPageChangesOnDisplayNextPage()
+    {
+        var emitter = new Subject<Unit>();
+        var text = string.Empty;
+        var scheduler = new TestScheduler();
+        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
+            new TextFileLoaderForTest(["coucou", "mask A", "B masK", "coucou", "CMASK"]), 2,
+            scheduler);
+        scheduler.AdvanceBy(OperationDelay.Ticks);
+        sut.PageChangesStream.Subscribe(s => text = s);
+        
+        sut.DisplayNextPage();
+        scheduler.AdvanceBy(OperationDelay.Ticks);
+
+        text.ShouldBe(string.Join(Environment.NewLine,["B masK", "mask A"]));
     }
 }

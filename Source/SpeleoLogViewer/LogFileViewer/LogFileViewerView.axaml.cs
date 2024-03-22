@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Avalonia.Controls;
@@ -13,6 +14,7 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
 {
     private IDisposable? _changesSubscription;
     private IDisposable? _refreshAllSubscription;
+    private IDisposable? _pageChangesSubscription;
 
     public SelectableTextBlock? LogFileContent => this.FindControl<SelectableTextBlock>("LogContent");
 
@@ -27,6 +29,7 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
         {
             _refreshAllSubscription ??= SubscribeToRefreshAll();
             _changesSubscription ??= SubscribeToChanges();
+            _pageChangesSubscription ??= SubscribeToPageChanges();
         });
         AvaloniaXamlLoader.Load(this);
     }
@@ -49,10 +52,17 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
             .Select(s => new Run(s))
             .Do(PushChangesToSelectableTextBox)
             .Subscribe();
+    
+    private IDisposable? SubscribeToPageChanges() =>
+        ViewModel?
+            .PageChangesStream
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Do(s => LogFileContent?.Inlines?.Add(s))
+            .Subscribe();
 
-    private void PushChangesToSelectableTextBox(Run inline)
+    private void PushChangesToSelectableTextBox(Inline inline)
     {
-        using (new Watcher($"PushToSelectableTextBox {inline.Text!.Length}"))
+        using (new Watcher("PushToSelectableTextBox"))
         {
             LogFileContent?
                 .Inlines?
@@ -66,4 +76,15 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
             .ObserveOn(RxApp.MainThreadScheduler)
             .Do(_ => inline.Classes.Clear())
             .Subscribe();
+
+    private void ScrollViewer_OnScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        var scrollViewer = (ScrollViewer)sender!;
+        //Console.WriteLine($"{IsScrollToBottom(scrollViewer)}");
+        if(IsScrollToBottom(scrollViewer) && (LogFileContent?.Inlines?.Any() ?? false))
+            ViewModel?.DisplayNextPage();
+    }
+
+    private static bool IsScrollToBottom(ScrollViewer scrollViewer) => 
+        scrollViewer.Offset.Y.Equals(scrollViewer.ScrollBarMaximum.Y);
 }
