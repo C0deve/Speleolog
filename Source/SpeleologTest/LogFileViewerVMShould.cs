@@ -228,4 +228,22 @@ public class LogFileViewerVMShould
 
         text.ShouldBe(string.Join(Environment.NewLine,["B masK", "mask A"]));
     }
+    
+    [Fact]
+    public void NotEmitPageChangesOnDisplayNextPageIfAllDataDisplayed()
+    {
+        var emitter = new Subject<Unit>();
+        var text = string.Empty;
+        var scheduler = new TestScheduler();
+        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
+            new TextFileLoaderForTest(["coucou", "mask A", "B masK", "coucou", "CMASK"]), 5,
+            scheduler);
+        scheduler.AdvanceBy(OperationDelay.Ticks);
+        sut.PageChangesStream.Subscribe(s => text = s);
+        
+        sut.DisplayNextPage();
+        scheduler.AdvanceBy(OperationDelay.Ticks);
+
+        text.ShouldBe(string.Empty);
+    }
 }
