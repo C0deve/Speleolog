@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
@@ -25,7 +24,7 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
 
     private void InitializeComponent()
     {
-        this.WhenActivated(disposable =>
+        this.WhenActivated(_ =>
         {
             _refreshAllSubscription ??= SubscribeToRefreshAll();
             _changesSubscription ??= SubscribeToChanges();
@@ -38,8 +37,16 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
         ViewModel?
             .ChangesStream
             .ObserveOn(RxApp.MainThreadScheduler)
-            .Select(s => new Run(s))
-            .Do(run => run.Classes.Add("JustAdded"))
+            .SelectMany(lines => lines.Select(line =>
+            {
+                var run = new Run(line.Text);
+                run.Classes.Add("JustAdded");
+
+                if (line is ErrorLogLinesAggregate)
+                    run.Classes.Add("Error");
+
+                return run;
+            }))
             .Do(AddTimerToRemoveClass)
             .Do(PushChangesToSelectableTextBox)
             .Subscribe();
@@ -49,14 +56,27 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
             .RefreshAllStream
             .ObserveOn(RxApp.MainThreadScheduler)
             .Do(_ => LogFileContent?.Inlines?.Clear())
-            .Select(s => new Run(s))
+            .SelectMany(lines => lines.Select(line =>
+            {
+                var run = new Run(line.Text);
+                if (line is ErrorLogLinesAggregate)
+                    run.Classes.Add("Error");
+                return run;
+            }))
             .Do(PushChangesToSelectableTextBox)
             .Subscribe();
-    
+
     private IDisposable? SubscribeToPageChanges() =>
         ViewModel?
             .PageChangesStream
             .ObserveOn(RxApp.MainThreadScheduler)
+            .SelectMany(lines => lines.Select(line =>
+            {
+                var run = new Run(line.Text);
+                if (line is ErrorLogLinesAggregate)
+                    run.Classes.Add("Error");
+                return run;
+            }))
             .Do(s => LogFileContent?.Inlines?.Add(s))
             .Subscribe();
 
@@ -74,17 +94,17 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
         Observable
             .Timer(ViewModel?.AnimationDuration ?? TimeSpan.FromSeconds(3))
             .ObserveOn(RxApp.MainThreadScheduler)
-            .Do(_ => inline.Classes.Clear())
+            .Do(_ => inline.Classes.Remove("JustAdded"))
             .Subscribe();
 
-    private void ScrollViewer_OnScrollChanged(object? sender, ScrollChangedEventArgs e)
+    private void ScrollViewer_OnScrollChanged(object? sender, ScrollChangedEventArgs _)
     {
         var scrollViewer = (ScrollViewer)sender!;
         //Console.WriteLine($"{IsScrollToBottom(scrollViewer)}");
-        if(IsScrollToBottom(scrollViewer) && (LogFileContent?.Inlines?.Any() ?? false))
+        if (IsScrollToBottom(scrollViewer) && (LogFileContent?.Inlines?.Any() ?? false))
             ViewModel?.DisplayNextPage();
     }
 
-    private static bool IsScrollToBottom(ScrollViewer scrollViewer) => 
+    private static bool IsScrollToBottom(ScrollViewer scrollViewer) =>
         scrollViewer.Offset.Y.Equals(scrollViewer.ScrollBarMaximum.Y);
 }

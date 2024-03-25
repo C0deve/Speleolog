@@ -23,6 +23,9 @@
             <Style Selector="Run">
                 <Setter Property="Background" Value="{StaticResource BackGround}" />
             </Style>
+            <Style Selector="Run.Error">
+                <Setter Property="Foreground" Value="{StaticResource Error}" />
+            </Style>
             <Style Selector="Run.JustAdded">
                 <Setter Property="Background" Value="{StaticResource JustAppendHighlight}" />
                 <Style.Animations>

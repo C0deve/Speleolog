@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive;
@@ -16,17 +17,17 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
 {
     private readonly CompositeDisposable _disposable = new();
     private string _actualText = "";
-    private readonly Subject<string> _changes = new();
-    private readonly Subject<string> _pageChanges = new();
-    private readonly BehaviorSubject<string> _refreshAll = new("");
+    private readonly Subject<FrozenSet<LogLinesAggregate>> _changes = new();
+    private readonly Subject<FrozenSet<LogLinesAggregate>> _pageChanges = new();
+    private readonly BehaviorSubject<FrozenSet<LogLinesAggregate>> _refreshAll = new(FrozenSet<LogLinesAggregate>.Empty);
     private readonly TimeSpan _throttleTime = TimeSpan.FromMilliseconds(500);
     private bool _allDataAreDisplayed;
     [Reactive] private short CurrentPage { get; set; }
     public TimeSpan AnimationDuration { get; } = TimeSpan.FromSeconds(10);
     public string FilePath { get; }
-    public IObservable<string> ChangesStream { get; }
-    public IObservable<string> RefreshAllStream { get; }
-    public IObservable<string> PageChangesStream { get; }
+    public IObservable<FrozenSet<LogLinesAggregate>> ChangesStream { get; }
+    public IObservable<FrozenSet<LogLinesAggregate>> RefreshAllStream { get; }
+    public IObservable<FrozenSet<LogLinesAggregate>> PageChangesStream { get; }
     [Reactive] public string Filter { get; set; }
     [Reactive] public string MaskText { get; set; }
 
@@ -37,6 +38,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
         int lineCountByPage,
         IScheduler? scheduler = null)
     {
+        var logAggregator = new LogAggregator("error");
         ChangesStream = _changes.AsObservable();
         RefreshAllStream = _refreshAll.AsObservable();
         PageChangesStream = _pageChanges.AsObservable();
@@ -46,7 +48,6 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
         FilePath = filePath;
 
         var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
-
 
         var firstFileContentLoading =
             LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler) // File loading on creation
@@ -72,18 +73,17 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .Select(text => DoFilter(Filter, text))
             .Select(text => DoMaskText(MaskText, text))
             .Select(Reverse)
-            .Select(Join)
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .Select(s => s.EndsWith(Environment.NewLine) ? s : s + Environment.NewLine)
+            .Select(logAggregator.Aggregate)
+            .Where(s => s.Count != 0)
             .Subscribe(_changes)
             .DisposeWith(_disposable);
-        
+
         var filterOrMaskStream =
             this.WhenAnyValue(vm => vm.Filter, vm => vm.MaskText, (filter, mask) => (Filter: filter, Mask: mask))
                 .SkipUntil(firstFileContentLoading)
                 .Throttle(_throttleTime, taskpoolScheduler)
                 .DistinctUntilChanged()
-                .Select(data => (Text:Split(_actualText), data.Mask, data.Filter))
+                .Select(data => (Text: Split(_actualText), data.Mask, data.Filter))
                 .Select(data => (Text: DoFilter(data.Filter, data.Text), data.Mask))
                 .Select(data => DoMaskText(data.Mask, data.Text));
 
@@ -93,21 +93,21 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .Do(_ => CurrentPage = 0)
             .Select(text => TakeLast(lineCountByPage, text, 0))
             .Select(Reverse)
-            .Select(Join)
-            .Do(text => _allDataAreDisplayed = string.IsNullOrWhiteSpace(text))
+            .Select(logAggregator.Aggregate)
+            .Where(s => s.Count != 0)
             .Subscribe(_refreshAll)
             .DisposeWith(_disposable);
 
         this.WhenAnyValue(vm => vm.CurrentPage) // Pages stream
             .SkipUntil(firstFileContentLoading)
             .Where(page => page > 0)
-            .Select(page => (Text:Split(_actualText), NewPage:page))
+            .Select(page => (Text: Split(_actualText), NewPage: page))
             .Select(data => (Text: DoFilter(Filter, data.Text), data.NewPage))
             .Select(data => TakeLast(lineCountByPage, data.Text, data.NewPage))
             .Select(text => DoMaskText(MaskText, text))
             .Select(Reverse)
-            .Select(Join)
-            .Do(text => _allDataAreDisplayed = string.IsNullOrWhiteSpace(text))
+            .Select(logAggregator.Aggregate)
+            .Do(text => _allDataAreDisplayed = text.Count == 0)
             .Where(_ => !_allDataAreDisplayed)
             .Subscribe(_pageChanges)
             .DisposeWith(_disposable);
@@ -120,7 +120,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .Connect()
             .DisposeWith(_disposable);
     }
-
+    
     public void DisplayNextPage()
     {
         if (_allDataAreDisplayed) return;
@@ -133,50 +133,31 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
     {
         using (new Watcher("Split"))
         {
-           return actualText.Split(Environment.NewLine);
+            return actualText.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
         }
     }
-    
-    private static string Join(IEnumerable<string> actualText)
-    {
-        using (new Watcher("Join"))
-        {
-            return actualText.Join(Environment.NewLine);
-        }
-    }
-    
-    private static IEnumerable<string> TakeLast(int lineCount, IEnumerable<string> actualText, int actualPageIndex)
-    {
-        using (new Watcher("TakeLast"))
-        {
-            return actualText
-                .SkipLast(lineCount * actualPageIndex)
-                .TakeLast(lineCount);
-        }
-    }
+
+    private static IEnumerable<string> TakeLast(int lineCount, IEnumerable<string> actualText, int actualPageIndex) =>
+        actualText
+            .SkipLast(lineCount * actualPageIndex)
+            .TakeLast(lineCount);
 
     private static IEnumerable<string> DoMaskText(string mask, IEnumerable<string> actualText)
     {
-        using (new Watcher("Mask"))
-        {
-            if (string.IsNullOrWhiteSpace(mask))
-                return actualText;
+        if (string.IsNullOrWhiteSpace(mask))
+            return actualText;
 
-            return actualText.Select(line => 
-                line.Replace(mask, string.Empty, StringComparison.InvariantCultureIgnoreCase));
-        }
+        return actualText.Select(line =>
+            line.Replace(mask, string.Empty, StringComparison.InvariantCultureIgnoreCase));
     }
 
     private static IEnumerable<string> DoFilter(string filter, IEnumerable<string> actualText)
     {
-        using (new Watcher("Filter"))
-        {
-            if (string.IsNullOrWhiteSpace(filter))
-                return actualText;
+        if (string.IsNullOrWhiteSpace(filter))
+            return actualText;
 
-            return actualText
-                .Where(line => line.Contains(filter, StringComparison.InvariantCultureIgnoreCase));
-        }
+        return actualText
+            .Where(line => line.Contains(filter, StringComparison.InvariantCultureIgnoreCase));
     }
 
     private static IObservable<string> LoadFileContentAsync(string filePath, ITextFileLoader textFileLoader, IScheduler taskpoolScheduler) =>
