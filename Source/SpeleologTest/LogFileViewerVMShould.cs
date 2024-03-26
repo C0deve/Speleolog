@@ -1,4 +1,4 @@
-﻿using System.Collections.Frozen;
+﻿using System.Collections.Immutable;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -18,7 +18,7 @@ public class LogFileViewerVMShould
     {
         var emitter = new Subject<Unit>();
         var scheduler = new TestScheduler();
-        FrozenSet<LogLinesAggregate>? text = null;
+        ImmutableArray<LogLinesAggregate>? text = null;
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["A", "B", "C"]), 300,
             scheduler);
@@ -26,7 +26,23 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks);
         sut.RefreshAllStream.Subscribe(s => text = s);
 
-        text.ToStringArray().ShouldBe(["C", "B", "A", ""]);
+        text.ToStringArray().ShouldBe(["C", "B", "A"]);
+    }
+    
+    [Fact]
+    public void EmitRefreshAllPagedOnCreation()
+    {
+        var emitter = new Subject<Unit>();
+        var scheduler = new TestScheduler();
+        ImmutableArray<LogLinesAggregate>? text = null;
+        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
+            new TextFileLoaderForTest(["A", "B", "C"]), 2,
+            scheduler);
+
+        scheduler.AdvanceBy(OperationDelay.Ticks);
+        sut.RefreshAllStream.Subscribe(s => text = s);
+
+        text.ToStringArray().Length.ShouldBe(2);
     }
 
     [Fact]
@@ -35,7 +51,7 @@ public class LogFileViewerVMShould
         string[] lines = ["A", "B", "C"];
         var emitter = new Subject<Unit>();
         var scheduler = new TestScheduler();
-        FrozenSet<LogLinesAggregate>? text = null;
+        ImmutableArray<LogLinesAggregate>? text = null;
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new SequenceTextFileLoaderForTest([""], lines), 300,
             scheduler);
@@ -45,7 +61,7 @@ public class LogFileViewerVMShould
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
-        text.ToStringArray().ShouldBe(["C", "B", "A", ""]);
+        text.ToStringArray().ShouldBe(["C", "B", "A"]);
     }
 
     [Fact]
@@ -54,7 +70,7 @@ public class LogFileViewerVMShould
         string[] lines = ["A", "B", "C", "D"];
         var emitter = new Subject<Unit>();
         var scheduler = new TestScheduler();
-        FrozenSet<LogLinesAggregate>? text = null;
+        ImmutableArray<LogLinesAggregate>? text = null;
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new SequenceTextFileLoaderForTest(["A"], lines), 300,
             scheduler);
@@ -64,14 +80,14 @@ public class LogFileViewerVMShould
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
 
-        text.ToStringArray().ShouldBe(["D", "C", "B", ""]);
+        text.ToStringArray().ShouldBe(["D", "C", "B"]);
     }
 
     [Fact]
     public void EmitRefreshAllOnFilterChanged()
     {
         var emitter = new Subject<Unit>();
-        FrozenSet<LogLinesAggregate>? text = null;
+        ImmutableArray<LogLinesAggregate>? text = null;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["mask A", "B masK", "CMASK", "coucou"]), 300,
@@ -84,14 +100,14 @@ public class LogFileViewerVMShould
         sut.Filter = "mask";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
-        text.ToStringArray().ShouldBe(["CMASK", "B masK", "mask A", ""]);
+        text.ToStringArray().ShouldBe(["CMASK", "B masK", "mask A"]);
     }
 
     [Fact]
     public void EmitFilteredChangesOnFileChanged()
     {
         var emitter = new Subject<Unit>();
-        FrozenSet<LogLinesAggregate>? text = null;
+        ImmutableArray<LogLinesAggregate>? text = null;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new SequenceTextFileLoaderForTest(["coucou"], ["coucou", "mask A", "B masK", "coucou", "CMASK"]), 300,
@@ -106,14 +122,14 @@ public class LogFileViewerVMShould
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
-        text.ToStringArray().ShouldBe(["CMASK", "B masK", "mask A", ""]);
+        text.ToStringArray().ShouldBe(["CMASK", "B masK", "mask A"]);
     }
 
     [Fact]
     public void EmitRefreshAllOnResetFilter()
     {
         var emitter = new Subject<Unit>();
-        FrozenSet<LogLinesAggregate>? text = null;
+        ImmutableArray<LogLinesAggregate>? text = null;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["coucou", "mask A"]), 300,
@@ -127,14 +143,14 @@ public class LogFileViewerVMShould
         sut.Filter = "";
         scheduler.AdvanceBy(TimeSpan.FromMilliseconds(250).Ticks); // throttle time
 
-        text.ToStringArray().ShouldBe(["mask A", "coucou", ""]);
+        text.ToStringArray().ShouldBe(["mask A", "coucou"]);
     }
 
     [Fact]
     public void EmitRefreshAllOnMask()
     {
         var emitter = new Subject<Unit>();
-        FrozenSet<LogLinesAggregate>? text = null;
+        ImmutableArray<LogLinesAggregate>? text = null;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["mask A", "B masK", "CMASK"]), 300,
@@ -148,14 +164,14 @@ public class LogFileViewerVMShould
         sut.MaskText = "mask";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
-        text.ToStringArray().ShouldBe(["C", "B ", " A", ""]);
+        text.ToStringArray().ShouldBe(["C", "B ", " A"]);
     }
 
     [Fact]
     public void EmitRefreshAllOnMaskAndFilter()
     {
         var emitter = new Subject<Unit>();
-        FrozenSet<LogLinesAggregate>? text = null;
+        ImmutableArray<LogLinesAggregate>? text = null;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["coucou", "filterA", "Mask B", "filterC Mask"]), 300,
@@ -170,14 +186,14 @@ public class LogFileViewerVMShould
         sut.Filter = "filter";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
-        text.ToStringArray().ShouldBe(["filterC ", "filterA", ""]);
+        text.ToStringArray().ShouldBe(["filterC ", "filterA"]);
     }
 
     [Fact]
     public void EmitMaskedChangesOnFileChanged()
     {
         var emitter = new Subject<Unit>();
-        FrozenSet<LogLinesAggregate>? text = null;
+        ImmutableArray<LogLinesAggregate>? text = null;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new SequenceTextFileLoaderForTest(["coucou"], ["coucou", "mask A", "B masK", "coucou", "CMASK"]), 300,
@@ -189,14 +205,14 @@ public class LogFileViewerVMShould
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
-        text.ToStringArray().ShouldBe(["C", "coucou", "B ", " A", ""]);
+        text.ToStringArray().ShouldBe(["C", "coucou", "B ", " A"]);
     }
 
     [Fact]
     public void EmitMaskedAndFilteredChangesOnFileChanged()
     {
         var emitter = new Subject<Unit>();
-        FrozenSet<LogLinesAggregate>? text = null;
+        ImmutableArray<LogLinesAggregate>? text = null;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new SequenceTextFileLoaderForTest(["coucou"], ["coucou", "filterA", "Mask filterB"]), 300,
@@ -209,14 +225,14 @@ public class LogFileViewerVMShould
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
-        text.ToStringArray().ShouldBe([" filterB", "filterA", ""]);
+        text.ToStringArray().ShouldBe([" filterB", "filterA"]);
     }
 
     [Fact]
     public void EmitPageChangesOnDisplayNextPage()
     {
         var emitter = new Subject<Unit>();
-        FrozenSet<LogLinesAggregate>? text = null;
+        ImmutableArray<LogLinesAggregate>? text = null;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["coucou", "mask A", "B masK", "coucou", "CMASK"]), 2,
@@ -227,14 +243,14 @@ public class LogFileViewerVMShould
         sut.DisplayNextPage();
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
-        text.ToStringArray().ShouldBe(["B masK", "mask A", ""]);
+        text.ToStringArray().ShouldBe(["B masK", "mask A"]);
     }
 
     [Fact]
     public void NotEmitPageChangesOnDisplayNextPageIfAllDataDisplayed()
     {
         var emitter = new Subject<Unit>();
-        FrozenSet<LogLinesAggregate>? text = null;
+        ImmutableArray<LogLinesAggregate>? text = null;
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["coucou", "mask A", "B masK", "coucou", "CMASK"]), 5,
@@ -252,5 +268,5 @@ public class LogFileViewerVMShould
 internal static class Extensions
 {
     public static string[] ToStringArray(this IEnumerable<LogLinesAggregate>? aggregates) => aggregates?
-        .SelectMany(aggregate => aggregate.Text.Split(Environment.NewLine)).ToArray() ?? Array.Empty<string>();
+        .SelectMany(aggregate => aggregate.Text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)).ToArray() ?? Array.Empty<string>();
 }

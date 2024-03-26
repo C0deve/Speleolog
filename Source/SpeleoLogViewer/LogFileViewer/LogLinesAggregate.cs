@@ -1,4 +1,6 @@
 ﻿namespace SpeleoLogViewer.LogFileViewer;
 
-public record LogLinesAggregate(string Text);
-public record ErrorLogLinesAggregate(string Text) : LogLinesAggregate(Text);
+public abstract record LogLinesAggregate(string Text);
+
+public record DefaultLogLinesAggregate(string Text) : LogLinesAggregate(Text);
+public record ErrorDefaultLogLinesAggregate(string Text) : DefaultLogLinesAggregate(Text);

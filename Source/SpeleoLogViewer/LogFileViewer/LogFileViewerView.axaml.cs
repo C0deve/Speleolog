@@ -42,7 +42,7 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
                 var run = new Run(line.Text);
                 run.Classes.Add("JustAdded");
 
-                if (line is ErrorLogLinesAggregate)
+                if (line is ErrorDefaultLogLinesAggregate)
                     run.Classes.Add("Error");
 
                 return run;
@@ -59,11 +59,11 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
             .SelectMany(lines => lines.Select(line =>
             {
                 var run = new Run(line.Text);
-                if (line is ErrorLogLinesAggregate)
+                if (line is ErrorDefaultLogLinesAggregate)
                     run.Classes.Add("Error");
                 return run;
             }))
-            .Do(PushChangesToSelectableTextBox)
+            .Do(s => LogFileContent?.Inlines?.Add(s))
             .Subscribe();
 
     private IDisposable? SubscribeToPageChanges() =>
@@ -73,7 +73,7 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
             .SelectMany(lines => lines.Select(line =>
             {
                 var run = new Run(line.Text);
-                if (line is ErrorLogLinesAggregate)
+                if (line is ErrorDefaultLogLinesAggregate)
                     run.Classes.Add("Error");
                 return run;
             }))

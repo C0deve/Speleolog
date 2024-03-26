@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Concurrency;
@@ -17,17 +17,17 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
 {
     private readonly CompositeDisposable _disposable = new();
     private string _actualText = "";
-    private readonly Subject<FrozenSet<LogLinesAggregate>> _changes = new();
-    private readonly Subject<FrozenSet<LogLinesAggregate>> _pageChanges = new();
-    private readonly BehaviorSubject<FrozenSet<LogLinesAggregate>> _refreshAll = new(FrozenSet<LogLinesAggregate>.Empty);
+    private readonly Subject<ImmutableArray<LogLinesAggregate>> _changes = new();
+    private readonly Subject<ImmutableArray<LogLinesAggregate>> _pageChanges = new();
+    private readonly BehaviorSubject<ImmutableArray<LogLinesAggregate>> _refreshAll = new(ImmutableArray<LogLinesAggregate>.Empty);
     private readonly TimeSpan _throttleTime = TimeSpan.FromMilliseconds(500);
     private bool _allDataAreDisplayed;
     [Reactive] private short CurrentPage { get; set; }
     public TimeSpan AnimationDuration { get; } = TimeSpan.FromSeconds(10);
     public string FilePath { get; }
-    public IObservable<FrozenSet<LogLinesAggregate>> ChangesStream { get; }
-    public IObservable<FrozenSet<LogLinesAggregate>> RefreshAllStream { get; }
-    public IObservable<FrozenSet<LogLinesAggregate>> PageChangesStream { get; }
+    public IObservable<ImmutableArray<LogLinesAggregate>> ChangesStream { get; }
+    public IObservable<ImmutableArray<LogLinesAggregate>> RefreshAllStream { get; }
+    public IObservable<ImmutableArray<LogLinesAggregate>> PageChangesStream { get; }
     [Reactive] public string Filter { get; set; }
     [Reactive] public string MaskText { get; set; }
 
@@ -72,9 +72,11 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .Select(Split)
             .Select(text => DoFilter(Filter, text))
             .Select(text => DoMaskText(MaskText, text))
-            .Select(Reverse)
+            .Select(Reverse) // Aggregate need to be done in reverse
             .Select(logAggregator.Aggregate)
-            .Where(s => s.Count != 0)
+            .Select(aggregates => aggregates.Reverse()) // Cancel the reverse because aggregate are displayed from top to bottom
+            .Select(aggregates => aggregates.ToImmutableArray<LogLinesAggregate>())
+            .Where(s => s.Length != 0)
             .Subscribe(_changes)
             .DisposeWith(_disposable);
 
@@ -94,7 +96,8 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .Select(text => TakeLast(lineCountByPage, text, 0))
             .Select(Reverse)
             .Select(logAggregator.Aggregate)
-            .Where(s => s.Count != 0)
+            .Select(aggregates => aggregates.ToImmutableArray<LogLinesAggregate>())
+            .Where(s => s.Length != 0)
             .Subscribe(_refreshAll)
             .DisposeWith(_disposable);
 
@@ -107,7 +110,8 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .Select(text => DoMaskText(MaskText, text))
             .Select(Reverse)
             .Select(logAggregator.Aggregate)
-            .Do(text => _allDataAreDisplayed = text.Count == 0)
+            .Select(aggregates => aggregates.ToImmutableArray<LogLinesAggregate>())
+            .Do(text => _allDataAreDisplayed = text.Length == 0)
             .Where(_ => !_allDataAreDisplayed)
             .Subscribe(_pageChanges)
             .DisposeWith(_disposable);

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +7,7 @@ namespace SpeleoLogViewer.LogFileViewer;
 
 public class LogAggregator(string error)
 {
-    public FrozenSet<LogLinesAggregate> Aggregate(IEnumerable<string> lines) =>
+    public IEnumerable<DefaultLogLinesAggregate> Aggregate(IEnumerable<string> lines) =>
         lines.Aggregate(
                 new List<Builder>(),
                 (aggregateList, line) =>
@@ -31,12 +30,13 @@ public class LogAggregator(string error)
 
                     return aggregateList;
                 })
-            .Select(builder => builder switch {
-                DefaultBuilder defaultBuilder => new LogLinesAggregate(defaultBuilder.Text),
-                ErrorBuilder errorBuilder => new ErrorLogLinesAggregate(errorBuilder.Text),
+            .Select(builder => builder switch
+            {
+                DefaultBuilder defaultBuilder => new DefaultLogLinesAggregate(defaultBuilder.Text),
+                ErrorBuilder errorBuilder => new ErrorDefaultLogLinesAggregate(errorBuilder.Text),
                 _ => throw new ArgumentOutOfRangeException(nameof(builder))
-            })
-            .ToFrozenSet();
+            });
+            
     
     private bool ErrorPredicate(string line) => 
         line.Contains(error, StringComparison.InvariantCultureIgnoreCase);
