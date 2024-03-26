@@ -97,7 +97,6 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .Select(Reverse)
             .Select(logAggregator.Aggregate)
             .Select(aggregates => aggregates.ToImmutableArray<LogLinesAggregate>())
-            .Where(s => s.Length != 0)
             .Subscribe(_refreshAll)
             .DisposeWith(_disposable);
 

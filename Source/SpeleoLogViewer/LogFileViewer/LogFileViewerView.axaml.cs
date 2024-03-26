@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Markup.Xaml;
 using Avalonia.ReactiveUI;
+using Avalonia.Threading;
 using ReactiveUI;
 
 namespace SpeleoLogViewer.LogFileViewer;
@@ -26,6 +27,18 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
     {
         this.WhenActivated(_ =>
         {
+            if (_refreshAllSubscription is null)
+                ViewModel?
+                    .RefreshAllStream
+                    .Where(array => array.Length == 0)
+                    .ObserveOn(RxApp.MainThreadScheduler)
+                    .Do(_ =>
+                    {
+                        LogFileContent?.Inlines?.Clear();
+                        LogFileContent?.Inlines?.Add( new Run(""));
+                        
+                    }).Subscribe();
+            
             _refreshAllSubscription ??= SubscribeToRefreshAll();
             _changesSubscription ??= SubscribeToChanges();
             _pageChangesSubscription ??= SubscribeToPageChanges();
@@ -55,7 +68,11 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
         ViewModel?
             .RefreshAllStream
             .ObserveOn(RxApp.MainThreadScheduler)
-            .Do(_ => LogFileContent?.Inlines?.Clear())
+            .Do(_ =>
+            {
+                LogFileContent?.Inlines?.Clear();
+                
+            })
             .SelectMany(lines => lines.Select(line =>
             {
                 var run = new Run(line.Text);
