@@ -134,16 +134,33 @@ public class LogFileViewerVMShould
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["coucou", "mask A"]), 300,
             scheduler);
-        sut.RefreshAllStream
-            .Skip(1) // skip refresh from creation
-            .Subscribe(s => text = s);
+        sut.RefreshAllStream.Subscribe(s => text = s);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.Filter = "mask";
-        scheduler.AdvanceBy(TimeSpan.FromMilliseconds(250).Ticks); // throttle time
+        scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
         sut.Filter = "";
-        scheduler.AdvanceBy(TimeSpan.FromMilliseconds(250).Ticks); // throttle time
+        scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
         text.ToStringArray().ShouldBe(["mask A", "coucou"]);
+    }
+    
+    [Fact]
+    public void EmitEmptyArrayAllOnFilterWithNoMatch()
+    {
+        var emitter = new Subject<Unit>();
+        ImmutableArray<LogLinesAggregate>? text = null;
+        var scheduler = new TestScheduler();
+        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
+            new TextFileLoaderForTest(["A", "B"]), 3,
+            scheduler);
+        sut.RefreshAllStream.Subscribe(s => text = s);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
+        
+        sut.Filter = "C";
+        scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
+        
+        text.ShouldBe(ImmutableArray<LogLinesAggregate>.Empty);
     }
 
     [Fact]
@@ -199,11 +216,12 @@ public class LogFileViewerVMShould
             new SequenceTextFileLoaderForTest(["coucou"], ["coucou", "mask A", "B masK", "coucou", "CMASK"]), 300,
             scheduler);
         sut.ChangesStream.Subscribe(s => text = s);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.MaskText = "mask";
-        scheduler.AdvanceBy(TimeSpan.FromMilliseconds(250).Ticks); // throttle time
+        scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
         emitter.OnNext(Unit.Default);
-        scheduler.AdvanceBy(OperationDelay.Ticks);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
 
         text.ToStringArray().ShouldBe(["C", "coucou", "B ", " A"]);
     }
@@ -218,9 +236,10 @@ public class LogFileViewerVMShould
             new SequenceTextFileLoaderForTest(["coucou"], ["coucou", "filterA", "Mask filterB"]), 300,
             scheduler);
         sut.ChangesStream.Subscribe(s => text = s);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.MaskText = "mask";
         sut.Filter = "filter";
-        scheduler.AdvanceBy(TimeSpan.FromMilliseconds(250).Ticks); // throttle time
+        scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks);
@@ -237,7 +256,7 @@ public class LogFileViewerVMShould
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["coucou", "mask A", "B masK", "coucou", "CMASK"]), 2,
             scheduler);
-        scheduler.AdvanceBy(OperationDelay.Ticks);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.PageChangesStream.Subscribe(s => text = s);
 
         sut.DisplayNextPage();
@@ -255,7 +274,7 @@ public class LogFileViewerVMShould
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["coucou", "mask A", "B masK", "coucou", "CMASK"]), 5,
             scheduler);
-        scheduler.AdvanceBy(OperationDelay.Ticks);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.PageChangesStream.Subscribe(s => text = s);
 
         sut.DisplayNextPage();
