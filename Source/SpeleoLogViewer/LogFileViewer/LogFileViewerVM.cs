@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Concurrency;
@@ -30,6 +31,9 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
     public IObservable<ImmutableArray<LogLinesAggregate>> PageChangesStream { get; }
     [Reactive] public string Filter { get; set; }
     [Reactive] public string MaskText { get; set; }
+    
+    [Reactive] public long LoadingDuration { get; private set; }
+    
 
     public LogFileViewerVM(
         string filePath,
@@ -163,13 +167,18 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .Where(line => line.Contains(filter, StringComparison.InvariantCultureIgnoreCase));
     }
 
-    private static IObservable<string> LoadFileContentAsync(string filePath, ITextFileLoader textFileLoader, IScheduler taskpoolScheduler) =>
+    private IObservable<string> LoadFileContentAsync(string filePath, ITextFileLoader textFileLoader, IScheduler taskpoolScheduler) =>
         Observable.FromAsync(async () =>
         {
             using (new Watcher("File loading"))
             {
-                return await textFileLoader.GetTextAsync(filePath, CancellationToken.None);
+                var watch = Stopwatch.StartNew();
+                var textAsync = await textFileLoader.GetTextAsync(filePath, CancellationToken.None);
+                watch.Stop();
+                LoadingDuration = watch.ElapsedMilliseconds;
+                return textAsync;
             }
+
         }, taskpoolScheduler);
 
 

@@ -3,19 +3,13 @@ using System.Diagnostics;
 
 namespace SpeleoLogViewer.LogFileViewer;
 
-internal class Watcher : IDisposable
+internal class Watcher(string libelle) : IDisposable
 {
-    private readonly string _libelle;
     private readonly Stopwatch _watch = Stopwatch.StartNew();
-
-    public Watcher(string libelle)
-    {
-        _libelle = libelle;
-    }
 
     public void Dispose()
     {
         _watch.Stop();
-        Console.WriteLine($"{_libelle} {_watch.ElapsedMilliseconds}ms");
+        Console.WriteLine($"{libelle} {_watch.ElapsedMilliseconds}ms");
     }
 }

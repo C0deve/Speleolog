@@ -28,7 +28,7 @@ public class LogFileViewerVMShould
 
         text.ToStringArray().ShouldBe(["C", "B", "A"]);
     }
-    
+
     [Fact]
     public void EmitRefreshAllPagedOnCreation()
     {
@@ -144,7 +144,7 @@ public class LogFileViewerVMShould
 
         text.ToStringArray().ShouldBe(["mask A", "coucou"]);
     }
-    
+
     [Fact]
     public void EmitEmptyArrayAllOnFilterWithNoMatch()
     {
@@ -156,10 +156,10 @@ public class LogFileViewerVMShould
             scheduler);
         sut.RefreshAllStream.Subscribe(s => text = s);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
-        
+
         sut.Filter = "C";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
-        
+
         text.ShouldBe(ImmutableArray<LogLinesAggregate>.Empty);
     }
 
@@ -281,6 +281,24 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
         text.ToStringArray().ShouldBe([]);
+    }
+
+    [Fact]
+    public async Task ShowFileLoadingTime()
+    {
+        var emitter = new Subject<Unit>();
+        var scheduler = new TestScheduler();
+        var loadingDuration = TimeSpan.FromMilliseconds(100);
+        var textFileLoaderWithDuration = new TextFileLoaderWithDuration(loadingDuration);
+        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
+            textFileLoaderWithDuration, 300,
+            scheduler);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
+
+        emitter.OnNext(Unit.Default);
+        await Task.Delay(loadingDuration + TimeSpan.FromMilliseconds(20));
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
+        sut.LoadingDuration.ShouldBeInRange(loadingDuration.Milliseconds, (int)(loadingDuration.Milliseconds * 1.20));
     }
 }
 
