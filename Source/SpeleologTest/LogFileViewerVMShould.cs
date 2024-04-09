@@ -300,6 +300,26 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.LoadingDuration.ShouldBeInRange(loadingDuration.Milliseconds, (int)(loadingDuration.Milliseconds * 1.20));
     }
+    
+    [Fact]
+    public void EmitChangesOnReloadFile()
+    {
+        string[] lines = ["A", "B", "C"];
+        var emitter = new Subject<Unit>();
+        var scheduler = new TestScheduler();
+        ImmutableArray<LogLinesAggregate>? text = null;
+        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
+            new SequenceTextFileLoaderForTest([""], lines), 300,
+            scheduler);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
+        sut.ChangesStream.Subscribe(s => text = s);
+
+        sut.Reload.Execute().Subscribe();
+        scheduler.AdvanceBy(OperationDelay.Ticks);
+
+        text.ToStringArray().ShouldBe(["C", "B", "A"]);
+    }
+
 }
 
 internal static class Extensions

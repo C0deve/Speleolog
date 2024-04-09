@@ -33,7 +33,8 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
     [Reactive] public string MaskText { get; set; }
     
     [Reactive] public long LoadingDuration { get; private set; }
-    
+    public ReactiveCommand<Unit, string> Reload { get; }
+
 
     public LogFileViewerVM(
         string filePath,
@@ -53,25 +54,29 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
 
         var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
 
+        Reload = ReactiveCommand.CreateFromObservable(() => 
+            LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler));
+
         var firstFileContentLoading =
             LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler) // File loading on creation
                 .Do(input => { _actualText = input; })
                 .Publish();
 
-        var fileContentStream =
+        var fileContentChangedStream =
             fileChangedStream // changes fromm file system stream
                 .SkipUntil(firstFileContentLoading)
                 .Select(_ => LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler))
                 .Concat()
+                .Merge(Reload)
                 .Select(newText => new Data(newText, _actualText))
                 .Publish();
 
-        fileContentStream // save new content stream
+        fileContentChangedStream // save new content stream
             .Do(input => _actualText = input.NewText)
             .Subscribe()
             .DisposeWith(_disposable);
 
-        fileContentStream // Changes stream
+        fileContentChangedStream // Changes stream
             .Select(Diff)
             .Select(Split)
             .Select(text => DoFilter(Filter, text))
@@ -119,7 +124,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
             .Subscribe(_pageChanges)
             .DisposeWith(_disposable);
 
-        fileContentStream
+        fileContentChangedStream
             .Connect()
             .DisposeWith(_disposable);
 
