@@ -144,9 +144,53 @@ public class LogFileViewerVMShould
 
         text.ToStringArray().ShouldBe(["mask A", "coucou"]);
     }
+    
+    [Fact]
+    public void ResetCurrentPageOnResetFilter()
+    {
+        var emitter = new Subject<Unit>();
+        ImmutableArray<LogLinesAggregate>? text = null;
+        var scheduler = new TestScheduler();
+        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
+            new TextFileLoaderForTest(["coucou", "mask A"]), 1,
+            scheduler);
+        sut.PageChangesStream.Subscribe(s => text = s);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
+        sut.Filter = "mask";
+        scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
+
+        sut.Filter = "";
+        scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
+
+        sut.DisplayNextPage();
+        text.ToStringArray().ShouldBe(["coucou"]);
+    }
 
     [Fact]
-    public void EmitEmptyArrayAllOnFilterWithNoMatch()
+    public void DisplayNextPageAfterAllDisplayedAndResetFilter()
+    {
+        var emitter = new Subject<Unit>();
+        ImmutableArray<LogLinesAggregate>? text = null;
+        var scheduler = new TestScheduler();
+        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
+            new TextFileLoaderForTest(["coucou", "mask A"]), 1,
+            scheduler);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
+        sut.DisplayNextPage();
+        sut.DisplayNextPage();
+        sut.Filter = "mask";
+        scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
+        sut.PageChangesStream.Subscribe(s => text = s);
+
+        sut.Filter = "";
+        scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
+        sut.DisplayNextPage();
+
+        text.ToStringArray().ShouldBe(["coucou"]);
+    }
+    
+    [Fact]
+    public void EmitEmptyArrayOnFilterWithNoMatch()
     {
         var emitter = new Subject<Unit>();
         ImmutableArray<LogLinesAggregate>? text = null;

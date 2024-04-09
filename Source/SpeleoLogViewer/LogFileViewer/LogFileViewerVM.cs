@@ -101,7 +101,11 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
         firstFileContentLoading // Refresh all stream
             .Select(Split)
             .Merge(filterOrMaskStream)
-            .Do(_ => CurrentPage = 0)
+            .Do(_ =>
+            {
+                CurrentPage = 0;
+                _allDataAreDisplayed = false;
+            })
             .Select(text => TakeLast(lineCountByPage, text, 0))
             .Select(Reverse)
             .Select(logAggregator.Aggregate)
