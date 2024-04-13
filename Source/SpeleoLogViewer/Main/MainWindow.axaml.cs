@@ -10,14 +10,14 @@ namespace SpeleoLogViewer.Main;
 
 public partial class MainWindow : Window
 {
-    public MainWindowViewModel? ViewModel => DataContext as MainWindowViewModel;
+    public MainWindowVM? ViewModel => DataContext as MainWindowVM;
     
     public MainWindow()
     {
         InitializeComponent();
         AddHandler(DragDrop.DropEvent, DropHandler);
         AddHandler(DragDrop.DragOverEvent, DragOverHandler);
-        DataContext = new MainWindowViewModel(
+        DataContext = new MainWindowVM(
             StorageProvider, 
             new TextFileLoaderInOneRead(), 
             FileSystemWatcherFactory, 

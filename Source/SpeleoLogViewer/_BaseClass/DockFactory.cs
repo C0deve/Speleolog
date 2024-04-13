@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using Dock.Avalonia.Controls;
 using Dock.Model.Controls;
 using Dock.Model.Core;
-using Dock.Model.Mvvm;
-using Dock.Model.Mvvm.Controls;
+using Dock.Model.ReactiveUI;
+using Dock.Model.ReactiveUI.Controls;
 
 namespace SpeleoLogViewer._BaseClass;
 

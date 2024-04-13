@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
-using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Controls;
 using Dock.Model.Core;
 using ReactiveUI;
@@ -15,12 +16,11 @@ using SpeleoLogViewer._BaseClass;
 using SpeleoLogViewer.ApplicationState;
 using SpeleoLogViewer.FileChanged;
 using SpeleoLogViewer.LogFileViewer;
-using SpeleoLogViewer.LogFileViewer.Dockable;
 using SpeleoLogViewer.SpeleologTemplate;
 
 namespace SpeleoLogViewer.Main;
 
-public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, IDisposable
+public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
 {
     private readonly CompositeDisposable _disposables = [];
 
@@ -30,15 +30,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
     private readonly ISpeleologTemplateReader _templateReader;
     private readonly DockFactory _factory;
     private readonly FileChangedObservableFactory _fileChangedObservableFactory;
-
-    [ObservableProperty] private IRootDock? _layout;
-
     private readonly List<string> _openFiles = [];
-    public bool AppendFromBottom { get; private set; }
 
+    public IRootDock Layout { get; }
+    public ObservableCollection<string> ErrorMessages { get; } = []; 
+    public bool AppendFromBottom { get; private set; }
     public IEnumerable<string> OpenFiles => _openFiles.AsEnumerable();
 
-    public MainWindowViewModel(IStorageProvider storageProvider,
+    public ReactiveCommand<Unit, Unit> OpenFileCommand { get; }
+    public MainWindowVM(IStorageProvider storageProvider,
         ITextFileLoader textFileLoader,
         Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory,
         ISpeleologStateRepository speleologStateRepository,
@@ -51,15 +51,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
         _templateReader = templateReader;
         _factory = new DockFactory();
         Layout = _factory.CreateLayout();
-        if (Layout is not null) _factory.InitLayout(Layout);
+        _factory.InitLayout(Layout);
         _factory.DockableClosed += (_, args) =>
         {
-            if (args.Dockable is DockableLogFileVM logViewModel)
-                _openFiles.Remove(logViewModel.LogFileViewerVM.FilePath);
+            if (args.Dockable is LogFileViewerVM logViewModel)
+                _openFiles.Remove(logViewModel.FilePath);
         };
 
         _fileChangedObservableFactory = new FileChangedObservableFactory(fileSystemObserverFactory);
 
+        OpenFileCommand = ReactiveCommand.CreateFromTask(OpenFile);
+        
         // Load state from last application use
         Observable
             .FromAsync(speleologStateRepository.GetAsync, _schedulerProvider.Default)
@@ -94,8 +96,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
 
         _ = OpenFilesFromPath(result.Where(item => item is IStorageFile).Cast<IStorageFile>(), default);
     }
-
-    [RelayCommand]
+    
     private async Task OpenFile(CancellationToken token)
     {
         var files = await DoOpenFilePickerAsync();
@@ -106,7 +107,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
 
     private async Task OpenFilesFromPath(IEnumerable<IStorageFile> files, CancellationToken token)
     {
-        ErrorMessages?.Clear();
+        ErrorMessages.Clear();
         try
         {
             foreach (var givenFilePath in files.Select(file => file.Path.LocalPath))
@@ -139,20 +140,20 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDropTarget, ID
                 AllowMultiple = true
             });
 
-    private DockableLogFileVM CreateLogViewModel(string path)
+    private LogFileViewerVM CreateLogViewModel(string path)
     {
         _openFiles.Add(path);
-        return new DockableLogFileVM(new LogFileViewerVM(
+        return new LogFileViewerVM(
             filePath: path,
             fileChangedStream: _fileChangedObservableFactory.BuildFileChangedObservable(path, _schedulerProvider.Default),
             _textFileLoader, 100,
-            RxApp.TaskpoolScheduler));
+            RxApp.TaskpoolScheduler);
     }
 
     private void AddToDock(IDockable logViewModel)
     {
         var files = _factory.GetDockable<IDocumentDock>("Files");
-        if (Layout is null || files is null) return;
+        if (files is null) return;
 
         _factory.AddDockable(files, logViewModel);
         _factory.SetActiveDockable(logViewModel);

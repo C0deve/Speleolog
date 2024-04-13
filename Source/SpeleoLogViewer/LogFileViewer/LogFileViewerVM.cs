@@ -9,12 +9,13 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
+using Dock.Model.ReactiveUI.Controls;
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
 
 namespace SpeleoLogViewer.LogFileViewer;
 
-public sealed class LogFileViewerVM : ReactiveObject, IDisposable
+public sealed class LogFileViewerVM : Document, IDisposable
 {
     private readonly CompositeDisposable _disposable = new();
     private string _actualText = "";
@@ -34,8 +35,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
     
     [Reactive] public long LoadingDuration { get; private set; }
     public ReactiveCommand<Unit, string> Reload { get; }
-
-
+    
     public LogFileViewerVM(
         string filePath,
         IObservable<Unit> fileChangedStream,
@@ -51,6 +51,7 @@ public sealed class LogFileViewerVM : ReactiveObject, IDisposable
         Filter = string.Empty;
         MaskText = string.Empty;
         FilePath = filePath;
+        Title = System.IO.Path.GetFileName(FilePath);
 
         var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
 

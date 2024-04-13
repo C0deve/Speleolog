@@ -1,6 +1,7 @@
-﻿using System.Reflection;
+﻿using System.Reactive.Linq;
+using System.Reflection;
 using Avalonia.Platform.Storage;
-using Dock.Model.Mvvm.Controls;
+using Dock.Model.ReactiveUI.Controls;
 using NSubstitute;
 using Shouldly;
 using SpeleoLogViewer.ApplicationState;
@@ -22,7 +23,7 @@ public class MainViewModelShould
         storageProvider
             .OpenFilePickerAsync(Arg.Any<FilePickerOpenOptions>())
             .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { file }.AsReadOnly()));
-        using var sut = new MainWindowViewModel(
+        using var sut = new MainWindowVM(
             storageProvider, 
             new EmptyFileLoader(), 
             _ => Substitute.For<IFileSystemChangedWatcher>(), 
@@ -30,7 +31,7 @@ public class MainViewModelShould
             new SchedulerProvider(), 
             Substitute.For<ISpeleologTemplateReader>());
 
-        sut.OpenFileCommand.Execute(null);
+        sut.OpenFileCommand.Execute().Subscribe();
 
         sut.OpenFiles.Count().ShouldBe(1);
         sut.CloseLayout();
@@ -46,14 +47,14 @@ public class MainViewModelShould
         storageProvider
             .OpenFilePickerAsync(Arg.Any<FilePickerOpenOptions>())
             .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { file }.AsReadOnly()));
-        using var sut = new MainWindowViewModel(
+        using var sut = new MainWindowVM(
             storageProvider,
             new EmptyFileLoader(),
             _ => Substitute.For<IFileSystemChangedWatcher>(),
             stateProvider,
             new SchedulerProvider(),
             Substitute.For<ISpeleologTemplateReader>());
-        sut.OpenFileCommand.Execute(null);
+        sut.OpenFileCommand.Execute().Subscribe();
         var documentDock = ((DocumentDock)sut.Layout!.ActiveDockable!).ActiveDockable!;
 
         sut.Layout!.Factory!.CloseDockable(documentDock);
@@ -72,7 +73,7 @@ public class MainViewModelShould
         storageProvider
             .OpenFilePickerAsync(Arg.Any<FilePickerOpenOptions>())
             .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { templateFile }.AsReadOnly()));
-        using var sut = new MainWindowViewModel(
+        using var sut = new MainWindowVM(
             storageProvider, 
             new EmptyFileLoader(), 
             _ => Substitute.For<IFileSystemChangedWatcher>(), 
@@ -80,7 +81,7 @@ public class MainViewModelShould
             new SchedulerProvider(), 
             new SpeleologTemplateReader());
 
-        await sut.OpenFileCommand.ExecuteAsync(null);
+        await sut.OpenFileCommand.Execute();
         sut.OpenFiles.Count().ShouldBe(1);
         sut.CloseLayout();
     }

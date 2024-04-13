@@ -36,9 +36,9 @@
         <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.5" />
         
         <!--Dock layout-->
-        <PackageReference Include="Dock.Avalonia" Version="11.0.0.5" />
-        <PackageReference Include="Dock.Model" Version="11.0.0.5" />
-        <PackageReference Include="Dock.Model.Mvvm" Version="11.0.0.5" />
+        <PackageReference Include="Dock.Avalonia" Version="11.0.0.7" />
+        <PackageReference Include="Dock.Model" Version="11.0.0.7" />
+        <PackageReference Include="Dock.Model.ReactiveUI" Version="11.0.0.7" />
         <PackageReference Include="ReactiveUI.Fody" Version="19.5.41" />
     </ItemGroup>
 
@@ -50,10 +50,6 @@
       </Compile>
       <Compile Update="LogFile\LogView.axaml.cs">
         <DependentUpon>LogView.axaml</DependentUpon>
-        <SubType>Code</SubType>
-      </Compile>
-      <Compile Update="LogFileViewer\Dockable\DockableLogFileView.axaml.cs">
-        <DependentUpon>DockableLogFileView.axaml</DependentUpon>
         <SubType>Code</SubType>
       </Compile>
     </ItemGroup>

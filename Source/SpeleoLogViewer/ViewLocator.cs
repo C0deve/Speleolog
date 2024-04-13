@@ -1,7 +1,6 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
-using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Core;
 
 namespace SpeleoLogViewer;
@@ -28,5 +27,5 @@ public class ViewLocator : IDataTemplate
 
     }
 
-    public bool Match(object? data) => data is ObservableObject or IDockable;
+    public bool Match(object? data) => data is IDockable;
 }
