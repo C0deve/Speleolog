@@ -24,11 +24,11 @@
         <Style Selector="idc|DockControl">
             <Setter Property="(ids:DockProperties.ControlRecycling)" Value="{StaticResource ControlRecyclingKey}" />
         </Style>
-        <Style Selector="DocumentTabStripItem">
-            <Setter Property="Background" Value="Chartreuse" />
-        </Style>
-        <Style Selector="DocumentTabStripItem:active">
-            <Setter Property="Background" Value="Chartreuse" />
-        </Style>
+        <!-- <Style Selector="DocumentTabStripItem"> -->
+        <!--     <Setter Property="Background" Value="Chartreuse" /> -->
+        <!-- </Style> -->
+        <!-- <Style Selector="DocumentTabStripItem:active"> -->
+        <!--     <Setter Property="Background" Value="Chartreuse" /> -->
+        <!-- </Style> -->
     </Application.Styles>
 </Application>
