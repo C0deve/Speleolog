@@ -5,15 +5,15 @@ using System.Text;
 
 namespace SpeleoLogViewer.LogFileViewer;
 
-public class LogAggregator(string error)
+public class LogAggregator
 {
-    public IEnumerable<DefaultLogLinesAggregate> Aggregate(IEnumerable<string> lines) =>
+    public static IEnumerable<LogLinesAggregate> Aggregate(IEnumerable<string> lines, string errorTag) =>
         lines.Aggregate(
                 new List<Builder>(),
                 (aggregateList, line) =>
                 {
                     var last = aggregateList.LastOrDefault();
-                    if (ErrorPredicate(line))
+                    if (ErrorPredicate(line, errorTag))
                     {
                         if (last is ErrorBuilder)
                             last.AddLine(line);
@@ -38,8 +38,8 @@ public class LogAggregator(string error)
             });
             
     
-    private bool ErrorPredicate(string line) => 
-        line.Contains(error, StringComparison.InvariantCultureIgnoreCase);
+    private static bool ErrorPredicate(string line, string errorTag) => 
+        line.Contains(errorTag, StringComparison.InvariantCultureIgnoreCase);
     
     private abstract class Builder
     {

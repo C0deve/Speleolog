@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Concurrency;
@@ -32,6 +33,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
     public IObservable<ImmutableArray<LogLinesAggregate>> PageChangesStream { get; }
     [Reactive] public string Filter { get; set; }
     [Reactive] public string MaskText { get; set; }
+    [Reactive] public string ErrorTag { get; set; }
     
     [Reactive] public long LoadingDuration { get; private set; }
     public ReactiveCommand<Unit, string> Reload { get; }
@@ -40,10 +42,11 @@ public sealed class LogFileViewerVM : Document, IDisposable
         string filePath,
         IObservable<Unit> fileChangedStream,
         ITextFileLoader textFileLoader,
-        int lineCountByPage,
+        int lineCountByPage, 
+        string errorTag,
         IScheduler? scheduler = null)
     {
-        var logAggregator = new LogAggregator("error");
+        ErrorTag = errorTag;
         ChangesStream = _changes.AsObservable();
         RefreshAllStream = _refreshAll.AsObservable();
         PageChangesStream = _pageChanges.AsObservable();
@@ -51,7 +54,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
         Filter = string.Empty;
         MaskText = string.Empty;
         FilePath = filePath;
-        Title = System.IO.Path.GetFileName(FilePath);
+        Title = Path.GetFileName(FilePath);
 
         var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
 
@@ -83,15 +86,15 @@ public sealed class LogFileViewerVM : Document, IDisposable
             .Select(text => DoFilter(Filter, text))
             .Select(text => DoMaskText(MaskText, text))
             .Select(Reverse) // Aggregate need to be done in reverse
-            .Select(logAggregator.Aggregate)
+            .Select(lines => LogAggregator.Aggregate(lines, ErrorTag))
             .Select(aggregates => aggregates.Reverse()) // Cancel the reverse because aggregate are displayed from top to bottom
-            .Select(aggregates => aggregates.ToImmutableArray<LogLinesAggregate>())
+            .Select(aggregates => aggregates.ToImmutableArray())
             .Where(s => s.Length != 0)
             .Subscribe(_changes)
             .DisposeWith(_disposable);
 
-        var filterOrMaskStream =
-            this.WhenAnyValue(vm => vm.Filter, vm => vm.MaskText, (filter, mask) => (Filter: filter, Mask: mask))
+        var filterOrMaskOrErrorTagStream =
+            this.WhenAnyValue(vm => vm.Filter, vm => vm.MaskText, vm => vm.ErrorTag, (filter, mask, errorTag1) => (Filter: filter, Mask: mask, ErrorTag: errorTag1))
                 .SkipUntil(firstFileContentLoading)
                 .Throttle(_throttleTime, taskpoolScheduler)
                 .DistinctUntilChanged()
@@ -101,7 +104,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
 
         firstFileContentLoading // Refresh all stream
             .Select(Split)
-            .Merge(filterOrMaskStream)
+            .Merge(filterOrMaskOrErrorTagStream)
             .Do(_ =>
             {
                 CurrentPage = 0;
@@ -109,8 +112,8 @@ public sealed class LogFileViewerVM : Document, IDisposable
             })
             .Select(text => TakeLast(lineCountByPage, text, 0))
             .Select(Reverse)
-            .Select(logAggregator.Aggregate)
-            .Select(aggregates => aggregates.ToImmutableArray<LogLinesAggregate>())
+            .Select(lines => LogAggregator.Aggregate(lines, ErrorTag))
+            .Select(aggregates => aggregates.ToImmutableArray())
             .Subscribe(_refreshAll)
             .DisposeWith(_disposable);
 
@@ -122,8 +125,8 @@ public sealed class LogFileViewerVM : Document, IDisposable
             .Select(data => TakeLast(lineCountByPage, data.Text, data.NewPage))
             .Select(text => DoMaskText(MaskText, text))
             .Select(Reverse)
-            .Select(logAggregator.Aggregate)
-            .Select(aggregates => aggregates.ToImmutableArray<LogLinesAggregate>())
+            .Select(lines => LogAggregator.Aggregate(lines, ErrorTag))
+            .Select(aggregates => aggregates.ToImmutableArray())
             .Do(text => _allDataAreDisplayed = text.Length == 0)
             .Where(_ => !_allDataAreDisplayed)
             .Subscribe(_pageChanges)

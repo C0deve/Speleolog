@@ -9,9 +9,9 @@ public class LogAggregatorShould
     [Fact]
     public void AggregateLogByType()
     {
-        var sut = new LogAggregator("error");
+        var sut = new LogAggregator();
         IEnumerable<string> lines = ["A", "B", "Error1", "Error2", "E", "Error3"];
-        sut.Aggregate(lines).ShouldBe(
+        LogAggregator.Aggregate(lines, "error").ShouldBe(
             new List<LogLinesAggregate>
                 {
                     new DefaultLogLinesAggregate("A" + Environment.NewLine + "B" + Environment.NewLine),
@@ -25,9 +25,9 @@ public class LogAggregatorShould
     [Fact]
     public void RecognizeErrorLogByTag()
     {
-        var sut = new LogAggregator("test");
+        var sut = new LogAggregator();
         IEnumerable<string> lines = ["A", "B", "test1", "test2", "E", "test3"];
-        sut.Aggregate(lines)
+        LogAggregator.Aggregate(lines, "test")
             .ShouldBe(new List<LogLinesAggregate>
                 {
                     new DefaultLogLinesAggregate("A" + Environment.NewLine + "B" + Environment.NewLine),
@@ -40,15 +40,15 @@ public class LogAggregatorShould
     [Fact]
     public void KeepOrder()
     {
-        var sut = new LogAggregator("test");
+        var sut = new LogAggregator();
         List<string> lines = ["A", "B", "test1", "test2", "E", "test3"];
-        sut.Aggregate(lines).SelectMany(aggregate => aggregate.Text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
+        LogAggregator.Aggregate(lines, "error").SelectMany(aggregate => aggregate.Text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
             .ShouldBe(lines);
     }
     [Fact]
     public void RecognizeErrorLogByTag1()
     {
-        var sut = new LogAggregator("error");
+        var sut = new LogAggregator();
         IEnumerable<string> lines = ["A", "error", "error", "A", "A", "error", "A", "error", "error", "A"];
         var expected = new List<LogLinesAggregate>
             {
@@ -62,7 +62,7 @@ public class LogAggregatorShould
             }
             .ToImmutableArray();
         
-        sut.Aggregate(lines)
+        LogAggregator.Aggregate(lines, "error")
             .ShouldBe(expected);
     }
 }

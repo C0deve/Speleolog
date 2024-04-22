@@ -119,7 +119,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         }
         catch (Exception e)
         {
-            ErrorMessages?.Add(e.Message);
+            ErrorMessages.Add(e.Message);
         }
     }
 
@@ -146,7 +146,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         return new LogFileViewerVM(
             filePath: path,
             fileChangedStream: _fileChangedObservableFactory.BuildFileChangedObservable(path, _schedulerProvider.Default),
-            _textFileLoader, 100,
+            _textFileLoader, 100, "error",
             RxApp.TaskpoolScheduler);
     }
 
