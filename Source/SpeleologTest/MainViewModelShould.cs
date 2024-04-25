@@ -85,4 +85,29 @@ public class MainViewModelShould
         sut.OpenFiles.Count().ShouldBe(1);
         sut.CloseLayout();
     }
+    
+    [Fact]
+    public void PreventOpeningTheSameFileTwice()
+    {
+        var stateProvider = Substitute.For<ISpeleologStateRepository>();
+        var storageProvider = Substitute.For<IStorageProvider>();
+        var file = Substitute.For<IStorageFile>();
+        file.Path.Returns(new Uri("c:/test.txt"));
+        storageProvider
+            .OpenFilePickerAsync(Arg.Any<FilePickerOpenOptions>())
+            .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { file }.AsReadOnly()));
+        using var sut = new MainWindowVM(
+            storageProvider, 
+            new EmptyFileLoader(), 
+            _ => Substitute.For<IFileSystemChangedWatcher>(), 
+            stateProvider, 
+            new SchedulerProvider(), 
+            Substitute.For<ISpeleologTemplateReader>());
+
+        sut.OpenFileCommand.Execute().Subscribe();
+        sut.OpenFileCommand.Execute().Subscribe();
+        
+        sut.OpenFiles.Count().ShouldBe(1);
+        sut.CloseLayout();
+    }
 }

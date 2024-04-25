@@ -33,11 +33,12 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
     private readonly List<string> _openFiles = [];
 
     public IRootDock Layout { get; }
-    public ObservableCollection<string> ErrorMessages { get; } = []; 
+    public ObservableCollection<string> ErrorMessages { get; } = [];
     public bool AppendFromBottom { get; private set; }
     public IEnumerable<string> OpenFiles => _openFiles.AsEnumerable();
 
     public ReactiveCommand<Unit, Unit> OpenFileCommand { get; }
+
     public MainWindowVM(IStorageProvider storageProvider,
         ITextFileLoader textFileLoader,
         Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory,
@@ -61,7 +62,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         _fileChangedObservableFactory = new FileChangedObservableFactory(fileSystemObserverFactory);
 
         OpenFileCommand = ReactiveCommand.CreateFromTask(OpenFile);
-        
+
         // Load state from last application use
         Observable
             .FromAsync(speleologStateRepository.GetAsync, _schedulerProvider.Default)
@@ -70,18 +71,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
             .Do(state =>
             {
                 AppendFromBottom = state.AppendFromBottom;
-
-                foreach (var filePath in state.LastOpenFiles)
-                {
-                    try
-                    {
-                        AddToDock(CreateLogViewModel(filePath));
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                    }
-                }
+                foreach (var file in state.LastOpenFiles) CreateAndDock(file);
             })
             .Subscribe()
             .DisposeWith(_disposables);
@@ -96,7 +86,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
 
         _ = OpenFilesFromPath(result.Where(item => item is IStorageFile).Cast<IStorageFile>(), default);
     }
-    
+
     private async Task OpenFile(CancellationToken token)
     {
         var files = await DoOpenFilePickerAsync();
@@ -112,9 +102,11 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         {
             foreach (var givenFilePath in files.Select(file => file.Path.LocalPath))
             {
-                var filePaths = await GetAllFilePathAsync(givenFilePath, token);
-                foreach (var filePath in filePaths)
-                    AddToDock(CreateLogViewModel(filePath));
+                if (_templateReader.IsTemplateFile(givenFilePath))
+                    foreach (var pathFromTemplate in await GetFilesFromTemplate(givenFilePath, token))
+                        CreateAndDock(pathFromTemplate);
+                else
+                    CreateAndDock(givenFilePath);
             }
         }
         catch (Exception e)
@@ -123,14 +115,8 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         }
     }
 
-    private async Task<IReadOnlyList<string>> GetAllFilePathAsync(string givenFilePath, CancellationToken cancellationToken)
-    {
-        if (!_templateReader.IsTemplateFile(givenFilePath))
-            return [givenFilePath];
-
-        var template = await _templateReader.ReadAsync(givenFilePath, cancellationToken);
-        return template == null ? [] : template.Files;
-    }
+    private async Task<List<string>> GetFilesFromTemplate(string givenFilePath, CancellationToken token) =>
+        (await _templateReader.ReadAsync(givenFilePath, token))?.Files ?? [];
 
     private Task<IReadOnlyList<IStorageFile>> DoOpenFilePickerAsync() =>
         _storageProvider
@@ -140,15 +126,22 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
                 AllowMultiple = true
             });
 
-    private LogFileViewerVM CreateLogViewModel(string path)
+    private void CreateAndDock(string filePath)
     {
-        _openFiles.Add(path);
-        return new LogFileViewerVM(
+        if (_openFiles.Any(s => s == filePath)) return;
+
+        _openFiles.Add(filePath);
+        AddToDock(CreateLogViewModel(filePath));
+    }
+
+    private LogFileViewerVM CreateLogViewModel(string path) =>
+        new(
             filePath: path,
             fileChangedStream: _fileChangedObservableFactory.BuildFileChangedObservable(path, _schedulerProvider.Default),
-            _textFileLoader, 100, "error",
+            _textFileLoader,
+            100,
+            "error",
             RxApp.TaskpoolScheduler);
-    }
 
     private void AddToDock(IDockable logViewModel)
     {
