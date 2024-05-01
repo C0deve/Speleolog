@@ -34,15 +34,15 @@ public sealed class LogFileViewerVM : Document, IDisposable
     [Reactive] public string Filter { get; set; }
     [Reactive] public string MaskText { get; set; }
     [Reactive] public string ErrorTag { get; set; }
-    
+
     [Reactive] public long LoadingDuration { get; private set; }
     public ReactiveCommand<Unit, string> Reload { get; }
-    
+
     public LogFileViewerVM(
         string filePath,
         IObservable<Unit> fileChangedStream,
         ITextFileLoader textFileLoader,
-        int lineCountByPage, 
+        int lineCountByPage,
         string errorTag,
         IScheduler? scheduler = null)
     {
@@ -58,7 +58,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
 
         var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
 
-        Reload = ReactiveCommand.CreateFromObservable(() => 
+        Reload = ReactiveCommand.CreateFromObservable(() =>
             LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler));
 
         var firstFileContentLoading =
@@ -75,13 +75,9 @@ public sealed class LogFileViewerVM : Document, IDisposable
                 .Select(newText => new Data(newText, _actualText))
                 .Publish();
 
-        fileContentChangedStream // save new content stream
-            .Do(input => _actualText = input.NewText)
-            .Subscribe()
-            .DisposeWith(_disposable);
-
         fileContentChangedStream // Changes stream
             .Select(Diff)
+            .Do(change => _actualText += change)
             .Select(Split)
             .Select(text => DoFilter(Filter, text))
             .Select(text => DoMaskText(MaskText, text))
@@ -140,7 +136,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
             .Connect()
             .DisposeWith(_disposable);
     }
-    
+
     public void DisplayNextPage()
     {
         if (_allDataAreDisplayed) return;
@@ -191,7 +187,6 @@ public sealed class LogFileViewerVM : Document, IDisposable
                 LoadingDuration = watch.ElapsedMilliseconds;
                 return textAsync;
             }
-
         }, taskpoolScheduler);
 
 
@@ -200,18 +195,13 @@ public sealed class LogFileViewerVM : Document, IDisposable
         var actualTextLength = input.ActualText.Length;
         var newTextLength = input.NewText.Length;
 
-        return actualTextLength < newTextLength
-            ? input.NewText.Substring(actualTextLength, newTextLength - actualTextLength)
-            : string.Empty;
+        return actualTextLength <= newTextLength 
+            ? input.NewText.Substring(actualTextLength, newTextLength - actualTextLength) // file size increases so logs have been added : keep only the changes 
+            : Environment.NewLine + input.NewText; // file size decreases so it is a creation. keep all text and add an artificial line break
     }
 
-    private static IEnumerable<string> Reverse(IEnumerable<string> input)
-    {
-        using (new Watcher("Reverse"))
-        {
-            return input.Reverse();
-        }
-    }
+    private static IEnumerable<string> Reverse(IEnumerable<string> input) =>
+        input.Reverse();
 
     public void Dispose() => _disposable.Dispose();
 }

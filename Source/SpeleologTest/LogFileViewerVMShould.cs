@@ -21,8 +21,8 @@ public class LogFileViewerVMShould
         var scheduler = new TestScheduler();
         ImmutableArray<LogLinesAggregate>? text = null;
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new TextFileLoaderForTest(["A", "B", "C"]), 
-            300, 
+            new TextFileLoaderForTest(["A", "B", "C"]),
+            300,
             ErrorTag,
             scheduler);
 
@@ -147,7 +147,7 @@ public class LogFileViewerVMShould
 
         text.ToStringArray().ShouldBe(["mask A", "coucou"]);
     }
-    
+
     [Fact]
     public void ResetCurrentPageOnResetFilter()
     {
@@ -191,7 +191,7 @@ public class LogFileViewerVMShould
 
         text.ToStringArray().ShouldBe(["coucou"]);
     }
-    
+
     [Fact]
     public void EmitEmptyArrayOnFilterWithNoMatch()
     {
@@ -347,7 +347,7 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.LoadingDuration.ShouldBeInRange(loadingDuration.Milliseconds, (int)(loadingDuration.Milliseconds * 1.20));
     }
-    
+
     [Fact]
     public void EmitChangesOnReloadFile()
     {
@@ -379,13 +379,13 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.RefreshAllStream
             .Subscribe(s => text = s);
-        
+
         sut.ErrorTag = "[Error  ]";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
         text.ToStringArray().ShouldBe(["C", "[Error  ]B", "A"]);
     }
-    
+
     [Fact]
     public void EmitRefreshAllOnce()
     {
@@ -396,11 +396,30 @@ public class LogFileViewerVMShould
             new SequenceTextFileLoaderForTest([], ["A"]), 300, ErrorTag,
             scheduler);
         sut.RefreshAllStream.Subscribe(s => text = s);
-        
+
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         scheduler.AdvanceBy(_throttleTime.Ticks + 100000); // throttle time
 
         text.ToStringArray().ShouldBe([]);
+    }
+
+    [Fact]
+    public void EmitChangesOnFileArchiving()
+    {
+        var emitter = new Subject<Unit>();
+        ImmutableArray<LogLinesAggregate>? text = null;
+        var scheduler = new TestScheduler();
+        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
+            new SequenceTextFileLoaderForTest(["A", "B"], ["E"]), 300, ErrorTag,
+            scheduler);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
+        sut.ChangesStream.Subscribe(s => text = s);
+        emitter.OnNext(Unit.Default);
+        scheduler.AdvanceBy(OperationDelay.Ticks);
+
+        scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
+
+        text.ToStringArray().ShouldBe(["E"]);
     }
 }
 
