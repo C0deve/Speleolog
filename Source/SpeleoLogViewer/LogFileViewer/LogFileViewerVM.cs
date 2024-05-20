@@ -19,12 +19,13 @@ namespace SpeleoLogViewer.LogFileViewer;
 public sealed class LogFileViewerVM : Document, IDisposable
 {
     private readonly CompositeDisposable _disposable = new();
-    private string _actualText = "";
+    private Cache _cache = new([]);
     private readonly Subject<ImmutableArray<LogLinesAggregate>> _changes = new();
     private readonly Subject<ImmutableArray<LogLinesAggregate>> _pageChanges = new();
     private readonly BehaviorSubject<ImmutableArray<LogLinesAggregate>> _refreshAll = new(ImmutableArray<LogLinesAggregate>.Empty);
     private readonly TimeSpan _throttleTime = TimeSpan.FromMilliseconds(500);
     private bool _allDataAreDisplayed;
+    private int _actualLength;
     [Reactive] private short CurrentPage { get; set; }
     public TimeSpan AnimationDuration { get; } = TimeSpan.FromSeconds(10);
     public string FilePath { get; }
@@ -63,7 +64,13 @@ public sealed class LogFileViewerVM : Document, IDisposable
 
         var firstFileContentLoading =
             LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler) // File loading on creation
-                .Do(input => { _actualText = input; })
+                .Select(s => (Split:Split(s), TotalLength: s.Length))
+                .Select(input => (Cache: new Cache(input.Split), input.TotalLength))
+                .Do(input =>
+                {
+                    _cache = input.Cache;
+                    _actualLength = input.TotalLength;
+                })
                 .Publish();
 
         var fileContentChangedStream =
@@ -72,13 +79,13 @@ public sealed class LogFileViewerVM : Document, IDisposable
                 .Select(_ => LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler))
                 .Concat()
                 .Merge(Reload)
-                .Select(newText => new Data(newText, _actualText))
+                .Select(newText => new Data(newText, _actualLength))
                 .Publish();
 
         fileContentChangedStream // Changes stream
             .Select(Diff)
-            .Do(change => _actualText += change)
             .Select(Split)
+            .Do(change => _cache.Add(change))
             .Select(text => DoFilter(Filter, text))
             .Select(text => DoMaskText(MaskText, text))
             .Select(Reverse) // Aggregate need to be done in reverse
@@ -94,12 +101,12 @@ public sealed class LogFileViewerVM : Document, IDisposable
                 .SkipUntil(firstFileContentLoading)
                 .Throttle(_throttleTime, taskpoolScheduler)
                 .DistinctUntilChanged()
-                .Select(data => (Text: Split(_actualText), data.Mask, data.Filter))
+                .Select(data => (Text: _cache.Values, data.Mask, data.Filter))
                 .Select(data => (Text: DoFilter(data.Filter, data.Text), data.Mask))
                 .Select(data => DoMaskText(data.Mask, data.Text));
 
         firstFileContentLoading // Refresh all stream
-            .Select(Split)
+            .Select(input => input.Cache.Values)
             .Merge(filterOrMaskOrErrorTagStream)
             .Do(_ =>
             {
@@ -116,7 +123,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
         this.WhenAnyValue(vm => vm.CurrentPage) // Pages stream
             .SkipUntil(firstFileContentLoading)
             .Where(page => page > 0)
-            .Select(page => (Text: Split(_actualText), NewPage: page))
+            .Select(page => (Text: _cache.Values, NewPage: page))
             .Select(data => (Text: DoFilter(Filter, data.Text), data.NewPage))
             .Select(data => TakeLast(lineCountByPage, data.Text, data.NewPage))
             .Select(text => DoMaskText(MaskText, text))
@@ -192,10 +199,10 @@ public sealed class LogFileViewerVM : Document, IDisposable
 
     private static string Diff(Data input)
     {
-        var actualTextLength = input.ActualText.Length;
+        var actualTextLength = input.ActualLength;
         var newTextLength = input.NewText.Length;
 
-        return actualTextLength <= newTextLength 
+        return actualTextLength <= newTextLength
             ? input.NewText.Substring(actualTextLength, newTextLength - actualTextLength) // file size increases so logs have been added : keep only the changes 
             : Environment.NewLine + input.NewText; // file size decreases so it is a creation. keep all text and add an artificial line break
     }
@@ -206,4 +213,4 @@ public sealed class LogFileViewerVM : Document, IDisposable
     public void Dispose() => _disposable.Dispose();
 }
 
-internal record Data(string NewText, string ActualText);
+internal record Data(string NewText, int ActualLength);
