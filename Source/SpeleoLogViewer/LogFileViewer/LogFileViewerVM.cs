@@ -24,8 +24,9 @@ public sealed class LogFileViewerVM : Document, IDisposable
     private readonly Subject<ImmutableArray<LogLinesAggregate>> _pageChanges = new();
     private readonly BehaviorSubject<ImmutableArray<LogLinesAggregate>> _refreshAll = new(ImmutableArray<LogLinesAggregate>.Empty);
     private readonly TimeSpan _throttleTime = TimeSpan.FromMilliseconds(500);
-    private bool _allDataAreDisplayed;
     private int _actualLength;
+    private Paginator<int> _paginator;
+
     [Reactive] private short CurrentPage { get; set; }
     public TimeSpan AnimationDuration { get; } = TimeSpan.FromSeconds(10);
     public string FilePath { get; }
@@ -56,7 +57,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
         MaskText = string.Empty;
         FilePath = filePath;
         Title = Path.GetFileName(FilePath);
-
+        _paginator = new Paginator<int>(Enumerable.Empty<int>(), lineCountByPage);
         var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
 
         Reload = ReactiveCommand.CreateFromObservable(() =>
@@ -64,7 +65,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
 
         var firstFileContentLoading =
             LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler) // File loading on creation
-                .Select(s => (Split:Split(s), TotalLength: s.Length))
+                .Select(s => (Split: Split(s), TotalLength: s.Length))
                 .Select(input => (Cache: new Cache(input.Split), input.TotalLength))
                 .Do(input =>
                 {
@@ -101,20 +102,15 @@ public sealed class LogFileViewerVM : Document, IDisposable
                 .SkipUntil(firstFileContentLoading)
                 .Throttle(_throttleTime, taskpoolScheduler)
                 .DistinctUntilChanged()
-                .Select(data => (Text: _cache.Values, data.Mask, data.Filter))
-                .Select(data => (Text: DoFilter(data.Filter, data.Text), data.Mask))
-                .Select(data => DoMaskText(data.Mask, data.Text));
+                .Select(data => (Text: _cache.Contains(data.Filter), data.Mask));
 
         firstFileContentLoading // Refresh all stream
-            .Select(input => input.Cache.Values)
+            .Select(input => (Text: input.Cache.Contains(""), Mask: ""))
             .Merge(filterOrMaskOrErrorTagStream)
-            .Do(_ =>
-            {
-                CurrentPage = 0;
-                _allDataAreDisplayed = false;
-            })
-            .Select(text => TakeLast(lineCountByPage, text, 0))
-            .Select(Reverse)
+            .Select(rows => (Paginator: new Paginator<int>(rows.Text, lineCountByPage), rows.Mask))
+            .Do(data => _paginator = data.Paginator)
+            .Select(data => (Text: _cache.FromIndex(data.Paginator.Next()), data.Mask))
+            .Select(data => DoMaskText(data.Mask, data.Text))
             .Select(lines => LogAggregator.Aggregate(lines, ErrorTag))
             .Select(aggregates => aggregates.ToImmutableArray())
             .Subscribe(_refreshAll)
@@ -122,16 +118,10 @@ public sealed class LogFileViewerVM : Document, IDisposable
 
         this.WhenAnyValue(vm => vm.CurrentPage) // Pages stream
             .SkipUntil(firstFileContentLoading)
-            .Where(page => page > 0)
-            .Select(page => (Text: _cache.Values, NewPage: page))
-            .Select(data => (Text: DoFilter(Filter, data.Text), data.NewPage))
-            .Select(data => TakeLast(lineCountByPage, data.Text, data.NewPage))
-            .Select(text => DoMaskText(MaskText, text))
-            .Select(Reverse)
+            .Select(_ => _cache.FromIndex(_paginator.Next()))
+            .Select(data => DoMaskText(MaskText, data))
             .Select(lines => LogAggregator.Aggregate(lines, ErrorTag))
             .Select(aggregates => aggregates.ToImmutableArray())
-            .Do(text => _allDataAreDisplayed = text.Length == 0)
-            .Where(_ => !_allDataAreDisplayed)
             .Subscribe(_pageChanges)
             .DisposeWith(_disposable);
 
@@ -146,8 +136,8 @@ public sealed class LogFileViewerVM : Document, IDisposable
 
     public void DisplayNextPage()
     {
-        if (_allDataAreDisplayed) return;
-
+        if(_paginator.IsEmpty()) return;
+        
         CurrentPage++;
         Console.WriteLine($"{nameof(DisplayNextPage)} page:{CurrentPage}");
     }
@@ -159,11 +149,6 @@ public sealed class LogFileViewerVM : Document, IDisposable
             return actualText.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
         }
     }
-
-    private static IEnumerable<string> TakeLast(int lineCount, IEnumerable<string> actualText, int actualPageIndex) =>
-        actualText
-            .SkipLast(lineCount * actualPageIndex)
-            .TakeLast(lineCount);
 
     private static IEnumerable<string> DoMaskText(string mask, IEnumerable<string> actualText)
     {

@@ -17,4 +17,16 @@ public class CacheShould
             .Add(["c", "d"])
             .Values
             .ShouldBe(["a", "b", "c", "d"]);
+
+    [Fact]
+    public void FindValues() =>
+        new Cache(["a", "b"])
+            .Contains("a")
+            .ShouldBe([0]);
+
+    [Fact]
+    public void GetValuesByIndex() =>
+        new Cache(["a", "b", "c"])
+            .FromIndex([0, 2])
+            .ShouldBe(["a", "c"]);
 }

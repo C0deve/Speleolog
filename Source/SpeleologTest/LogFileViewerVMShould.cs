@@ -421,6 +421,26 @@ public class LogFileViewerVMShould
 
         text.ToStringArray().ShouldBe(["E"]);
     }
+    
+    [Fact]
+    public void EmitPageChangesOnDisplayNextPageAfterFileArchiving()
+    {
+        var emitter = new Subject<Unit>();
+        ImmutableArray<LogLinesAggregate>? text = null;
+        var scheduler = new TestScheduler();
+        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
+            new SequenceTextFileLoaderForTest(["A", "B", "C"], ["D"]), 2, ErrorTag,
+            scheduler);
+        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
+        emitter.OnNext(Unit.Default);
+        scheduler.AdvanceBy(OperationDelay.Ticks);
+        sut.PageChangesStream.Subscribe(s => text = s);
+
+        sut.DisplayNextPage();
+        scheduler.AdvanceBy(OperationDelay.Ticks);
+
+        text.ToStringArray().ShouldBe(["A"]);
+    }
 }
 
 internal static class Extensions

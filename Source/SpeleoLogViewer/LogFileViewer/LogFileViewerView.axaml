@@ -31,7 +31,6 @@
                 <Style.Animations>
                     <!--  Fade out  -->
                     <Animation Duration="{Binding AnimationDuration}">
-                        <!--  10 sec is the time the log has the status "just added"  -->
                         <KeyFrame Cue="100%">
                             <Setter Property="Background" Value="{StaticResource BackGround}" />
                         </KeyFrame>
@@ -45,6 +44,8 @@
                 </Style.Animations>
             </Style>
         </Grid.Styles>
+
+        <!--  Log file  -->
         <ScrollViewer
             AllowAutoHide="True"
             Grid.Row="0"
@@ -52,6 +53,8 @@
             ScrollChanged="ScrollViewer_OnScrollChanged">
             <SelectableTextBlock Padding="0.5" x:Name="LogContent" />
         </ScrollViewer>
+
+        <!--  ToolBar  -->
         <Grid ColumnDefinitions="Auto,Auto,Auto,0.45*,0.45*,0.1*" Grid.Row="1">
             <TextBlock
                 Grid.Column="0"
