@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Linq;
+using System.Reactive;
 using System.Reactive.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Markup.Xaml;
 using Avalonia.ReactiveUI;
-using Avalonia.Threading;
+using ReactiveMarbles.ObservableEvents;
 using ReactiveUI;
 
 namespace SpeleoLogViewer.LogFileViewer;
@@ -38,6 +39,12 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
                         LogFileContent?.Inlines?.Add( new Run(""));
                         
                     }).Subscribe();
+            
+            this.FindControl<ScrollViewer>("ScrollViewer").Events()
+                .ScrollChanged
+                .Where(args => IsScrollToBottom((ScrollViewer)args.Source!) && (LogFileContent?.Inlines?.Any() ?? false))
+                .Select(_ => Unit.Default)
+                .InvokeCommand(this, view => view.ViewModel!.NextPage);
             
             _refreshAllSubscription ??= SubscribeToRefreshAll();
             _changesSubscription ??= SubscribeToChanges();
@@ -113,14 +120,6 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
             .ObserveOn(RxApp.MainThreadScheduler)
             .Do(_ => inline.Classes.Remove("JustAdded"))
             .Subscribe();
-
-    private void ScrollViewer_OnScrollChanged(object? sender, ScrollChangedEventArgs _)
-    {
-        var scrollViewer = (ScrollViewer)sender!;
-        //Console.WriteLine($"{IsScrollToBottom(scrollViewer)}");
-        if (IsScrollToBottom(scrollViewer) && (LogFileContent?.Inlines?.Any() ?? false))
-            ViewModel?.DisplayNextPage();
-    }
 
     private static bool IsScrollToBottom(ScrollViewer scrollViewer) =>
         scrollViewer.Offset.Y.Equals(scrollViewer.ScrollBarMaximum.Y);

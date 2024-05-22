@@ -14,7 +14,7 @@ public class Cache
 
     public string[] Values => _logs.Values.ToArray();
 
-    public Cache Add(string[] newLines)
+    public Cache Add(IEnumerable<string> newLines)
     {
         foreach (var line in  newLines) _logs.Add(_logs.Count, line);
         return this;

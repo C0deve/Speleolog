@@ -1,8 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Reactive.Linq;
 
 namespace SpeleoLogViewer.LogFileViewer;
 
 public static class Extensions
 {
-    public static string Join(this IEnumerable<string> input, string separator) => string.Join(separator, input);
+    public static IObservable<ImmutableArray<LogLinesAggregate>> LogToAggregateStream(
+        this IObservable<(IEnumerable<string> Logs, string Mask, string ErrorTag)> input,
+        Func<string, IEnumerable<string>, IEnumerable<string>> maskText) =>
+        input
+            .Select(data => (Logs: maskText(data.Mask, data.Logs), data.ErrorTag))
+            .Select(data => LogAggregator.Aggregate(data.Logs, data.ErrorTag))
+            .Select(aggregates => aggregates.ToImmutableArray());
 }

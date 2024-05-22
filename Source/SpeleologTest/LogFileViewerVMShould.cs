@@ -165,7 +165,7 @@ public class LogFileViewerVMShould
         sut.Filter = "";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
-        sut.DisplayNextPage();
+        sut.NextPage.Execute().Subscribe();
         text.ToStringArray().ShouldBe(["coucou"]);
     }
 
@@ -179,15 +179,15 @@ public class LogFileViewerVMShould
             new TextFileLoaderForTest(["coucou", "mask A"]), 1, ErrorTag,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
-        sut.DisplayNextPage();
-        sut.DisplayNextPage();
+        sut.NextPage.Execute().Subscribe();
+        sut.NextPage.Execute().Subscribe();
         sut.Filter = "mask";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
         sut.PageChangesStream.Subscribe(s => text = s);
 
         sut.Filter = "";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
-        sut.DisplayNextPage();
+        sut.NextPage.Execute().Subscribe();
 
         text.ToStringArray().ShouldBe(["coucou"]);
     }
@@ -306,7 +306,7 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.PageChangesStream.Subscribe(s => text = s);
 
-        sut.DisplayNextPage();
+        sut.NextPage.Execute().Subscribe();
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
         text.ToStringArray().ShouldBe(["B masK", "mask A"]);
@@ -324,7 +324,7 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.PageChangesStream.Subscribe(s => text = s);
 
-        sut.DisplayNextPage();
+        sut.NextPage.Execute().Subscribe();
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
         text.ToStringArray().ShouldBe([]);
@@ -436,7 +436,7 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks);
         sut.PageChangesStream.Subscribe(s => text = s);
 
-        sut.DisplayNextPage();
+        sut.NextPage.Execute().Subscribe();
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
         text.ToStringArray().ShouldBe(["A"]);

@@ -25,9 +25,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
     private readonly BehaviorSubject<ImmutableArray<LogLinesAggregate>> _refreshAll = new(ImmutableArray<LogLinesAggregate>.Empty);
     private readonly TimeSpan _throttleTime = TimeSpan.FromMilliseconds(500);
     private int _actualLength;
-    private Paginator<int> _paginator;
 
-    [Reactive] private short CurrentPage { get; set; }
     public TimeSpan AnimationDuration { get; } = TimeSpan.FromSeconds(10);
     public string FilePath { get; }
     public IObservable<ImmutableArray<LogLinesAggregate>> ChangesStream { get; }
@@ -39,6 +37,8 @@ public sealed class LogFileViewerVM : Document, IDisposable
 
     [Reactive] public long LoadingDuration { get; private set; }
     public ReactiveCommand<Unit, string> Reload { get; }
+
+    public ReactiveCommand<Unit, (IEnumerable<string> Logs, string MaskText, string ErrorTag)> NextPage { get; }
 
     public LogFileViewerVM(
         string filePath,
@@ -57,11 +57,14 @@ public sealed class LogFileViewerVM : Document, IDisposable
         MaskText = string.Empty;
         FilePath = filePath;
         Title = Path.GetFileName(FilePath);
-        _paginator = new Paginator<int>(Enumerable.Empty<int>(), lineCountByPage);
+        var paginator = new Paginator<int>(Enumerable.Empty<int>(), lineCountByPage);
         var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
 
         Reload = ReactiveCommand.CreateFromObservable(() =>
             LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler));
+
+        NextPage = ReactiveCommand.Create(() =>
+            (_cache.FromIndex(paginator.Next()), MaskText, ErrorTag));
 
         var firstFileContentLoading =
             LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler) // File loading on creation
@@ -102,26 +105,19 @@ public sealed class LogFileViewerVM : Document, IDisposable
                 .SkipUntil(firstFileContentLoading)
                 .Throttle(_throttleTime, taskpoolScheduler)
                 .DistinctUntilChanged()
-                .Select(data => (Text: _cache.Contains(data.Filter), data.Mask));
+                .Select(data => (Paginator: new Paginator<int>(_cache.Contains(data.Filter), lineCountByPage), data.Mask, data.ErrorTag));
 
         firstFileContentLoading // Refresh all stream
-            .Select(input => (Text: input.Cache.Contains(""), Mask: ""))
+            .Select(input => (Paginator: new Paginator<int>(input.Cache.Contains(""), lineCountByPage), Mask: "", ErrorTag))
             .Merge(filterOrMaskOrErrorTagStream)
-            .Select(rows => (Paginator: new Paginator<int>(rows.Text, lineCountByPage), rows.Mask))
-            .Do(data => _paginator = data.Paginator)
-            .Select(data => (Text: _cache.FromIndex(data.Paginator.Next()), data.Mask))
-            .Select(data => DoMaskText(data.Mask, data.Text))
-            .Select(lines => LogAggregator.Aggregate(lines, ErrorTag))
-            .Select(aggregates => aggregates.ToImmutableArray())
+            .Do(data => paginator = data.Paginator)
+            .Select(data => (Logs: _cache.FromIndex(data.Paginator.Next()), data.Mask, data.ErrorTag))
+            .LogToAggregateStream(DoMaskText)
             .Subscribe(_refreshAll)
             .DisposeWith(_disposable);
 
-        this.WhenAnyValue(vm => vm.CurrentPage) // Pages stream
-            .SkipUntil(firstFileContentLoading)
-            .Select(_ => _cache.FromIndex(_paginator.Next()))
-            .Select(data => DoMaskText(MaskText, data))
-            .Select(lines => LogAggregator.Aggregate(lines, ErrorTag))
-            .Select(aggregates => aggregates.ToImmutableArray())
+        NextPage
+            .LogToAggregateStream(DoMaskText)
             .Subscribe(_pageChanges)
             .DisposeWith(_disposable);
 
@@ -134,13 +130,6 @@ public sealed class LogFileViewerVM : Document, IDisposable
             .DisposeWith(_disposable);
     }
 
-    public void DisplayNextPage()
-    {
-        if(_paginator.IsEmpty()) return;
-        
-        CurrentPage++;
-        Console.WriteLine($"{nameof(DisplayNextPage)} page:{CurrentPage}");
-    }
 
     private static string[] Split(string actualText)
     {
