@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reactive;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
@@ -13,11 +14,9 @@ namespace SpeleoLogViewer.LogFileViewer;
 
 public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
 {
-    private IDisposable? _changesSubscription;
     private IDisposable? _refreshAllSubscription;
-    private IDisposable? _pageChangesSubscription;
 
-    public SelectableTextBlock? LogFileContent => this.FindControl<SelectableTextBlock>("LogContent");
+    private SelectableTextBlock? LogFileContent => this.FindControl<SelectableTextBlock>("LogContent");
 
     public LogFileViewerView()
     {
@@ -26,85 +25,69 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
 
     private void InitializeComponent()
     {
-        this.WhenActivated(_ =>
+        this.WhenActivated(disposable =>
         {
-            if (_refreshAllSubscription is null)
-                ViewModel?
-                    .RefreshAllStream
-                    .Where(array => array.Length == 0)
-                    .ObserveOn(RxApp.MainThreadScheduler)
-                    .Do(_ =>
-                    {
-                        LogFileContent?.Inlines?.Clear();
-                        LogFileContent?.Inlines?.Add( new Run(""));
-                        
-                    }).Subscribe();
-            
             this.FindControl<ScrollViewer>("ScrollViewer").Events()
                 .ScrollChanged
                 .Where(args => IsScrollToBottom((ScrollViewer)args.Source!) && (LogFileContent?.Inlines?.Any() ?? false))
                 .Select(_ => Unit.Default)
-                .InvokeCommand(this, view => view.ViewModel!.NextPage);
+                .InvokeCommand(this, view => view.ViewModel!.NextPage)
+                .DisposeWith(disposable);
             
-            _refreshAllSubscription ??= SubscribeToRefreshAll();
-            _changesSubscription ??= SubscribeToChanges();
-            _pageChangesSubscription ??= SubscribeToPageChanges();
+            _refreshAllSubscription ??= SubscribeToRefresh();
         });
         AvaloniaXamlLoader.Load(this);
     }
-
-    private IDisposable? SubscribeToChanges() =>
+    
+    private IDisposable? SubscribeToRefresh() =>
         ViewModel?
-            .ChangesStream
+            .RefreshStream
+            .Merge(ViewModel.NextPage)
             .ObserveOn(RxApp.MainThreadScheduler)
-            .SelectMany(lines => lines.Select(line =>
+            .Do(message =>
             {
-                var run = new Run(line.Text);
-                run.Classes.Add("JustAdded");
-
-                if (line is ErrorDefaultLogLinesAggregate)
-                    run.Classes.Add("Error");
-
-                return run;
-            }))
-            .Do(AddTimerToRemoveClass)
-            .Do(PushChangesToSelectableTextBox)
-            .Subscribe();
-
-    private IDisposable? SubscribeToRefreshAll() =>
-        ViewModel?
-            .RefreshAllStream
-            .ObserveOn(RxApp.MainThreadScheduler)
-            .Do(_ =>
-            {
-                LogFileContent?.Inlines?.Clear();
-                
+                switch (message)
+                {
+                    case DeleteAll:
+                        LogFileContent?.Inlines?.Clear();
+                        break;
+                    case AddToBottom lines:
+                        AddLinesToBottom(lines);
+                        break;
+                    case AddToTop lines:
+                        AddLinesToTop(lines);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(message));
+                }
             })
-            .SelectMany(lines => lines.Select(line =>
-            {
-                var run = new Run(line.Text);
-                if (line is ErrorDefaultLogLinesAggregate)
-                    run.Classes.Add("Error");
-                return run;
-            }))
-            .Do(s => LogFileContent?.Inlines?.Add(s))
             .Subscribe();
 
-    private IDisposable? SubscribeToPageChanges() =>
-        ViewModel?
-            .PageChangesStream
-            .ObserveOn(RxApp.MainThreadScheduler)
-            .SelectMany(lines => lines.Select(line =>
-            {
-                var run = new Run(line.Text);
-                if (line is ErrorDefaultLogLinesAggregate)
-                    run.Classes.Add("Error");
-                return run;
-            }))
-            .Do(s => LogFileContent?.Inlines?.Add(s))
-            .Subscribe();
+    private void AddLinesToBottom(AddToBottom lines)
+    {
+        foreach (var s in lines.Logs.Select(MapLogToRun)) 
+            LogFileContent?.Inlines?.Add(s);
+    }
+    
+    private void AddLinesToTop(AddToTop lines)
+    {
+        foreach (var run in lines.Logs.Select(MapLogToRun))
+        {
+            run.Classes.Add("JustAdded");
+            AddTimerToRemoveClass(run);
+            PushToTop(run);
+        }
+    }
+    
+    private static Run MapLogToRun(LogLinesAggregate line)
+    {
+        var run = new Run(line.Text);
+        if (line is ErrorDefaultLogLinesAggregate)
+            run.Classes.Add("Error");
+        return run;
+    }
 
-    private void PushChangesToSelectableTextBox(Inline inline)
+    private void PushToTop(Inline inline)
     {
         using (new Watcher("PushToSelectableTextBox"))
         {

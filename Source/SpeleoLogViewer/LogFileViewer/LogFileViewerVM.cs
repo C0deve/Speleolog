@@ -20,25 +20,20 @@ public sealed class LogFileViewerVM : Document, IDisposable
 {
     private readonly CompositeDisposable _disposable = new();
     private Cache _cache = new([]);
-    private readonly Subject<ImmutableArray<LogLinesAggregate>> _changes = new();
-    private readonly Subject<ImmutableArray<LogLinesAggregate>> _pageChanges = new();
-    private readonly BehaviorSubject<ImmutableArray<LogLinesAggregate>> _refreshAll = new(ImmutableArray<LogLinesAggregate>.Empty);
+    private readonly BehaviorSubject<IMessage> _refresh = new(new AddToBottom(ImmutableArray<LogLinesAggregate>.Empty));
     private readonly TimeSpan _throttleTime = TimeSpan.FromMilliseconds(500);
     private int _actualLength;
 
     public TimeSpan AnimationDuration { get; } = TimeSpan.FromSeconds(10);
     public string FilePath { get; }
-    public IObservable<ImmutableArray<LogLinesAggregate>> ChangesStream { get; }
-    public IObservable<ImmutableArray<LogLinesAggregate>> RefreshAllStream { get; }
-    public IObservable<ImmutableArray<LogLinesAggregate>> PageChangesStream { get; }
+    public IObservable<IMessage> RefreshStream { get; }
     [Reactive] public string Filter { get; set; }
     [Reactive] public string MaskText { get; set; }
     [Reactive] public string ErrorTag { get; set; }
 
     [Reactive] public long LoadingDuration { get; private set; }
     public ReactiveCommand<Unit, string> Reload { get; }
-
-    public ReactiveCommand<Unit, (IEnumerable<string> Logs, string MaskText, string ErrorTag)> NextPage { get; }
+    public ReactiveCommand<Unit, IMessage> NextPage { get; }
 
     public LogFileViewerVM(
         string filePath,
@@ -49,9 +44,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
         IScheduler? scheduler = null)
     {
         ErrorTag = errorTag;
-        ChangesStream = _changes.AsObservable();
-        RefreshAllStream = _refreshAll.AsObservable();
-        PageChangesStream = _pageChanges.AsObservable();
+        RefreshStream = _refresh.AsObservable();
 
         Filter = string.Empty;
         MaskText = string.Empty;
@@ -63,8 +56,12 @@ public sealed class LogFileViewerVM : Document, IDisposable
         Reload = ReactiveCommand.CreateFromObservable(() =>
             LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler));
 
-        NextPage = ReactiveCommand.Create(() =>
-            (_cache.FromIndex(paginator.Next()), MaskText, ErrorTag));
+        NextPage = ReactiveCommand.CreateFromObservable<IMessage>(() =>
+            Observable
+                .Return((_cache.FromIndex(paginator.Next()), MaskText, ErrorTag))
+                .LogToAggregateStream(DoMaskText)
+                .Select(array => new AddToBottom(array))
+        );
 
         var firstFileContentLoading =
             LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler) // File loading on creation
@@ -86,7 +83,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
                 .Select(newText => new Data(newText, _actualLength))
                 .Publish();
 
-        fileContentChangedStream // Changes stream
+        var changesStream = fileContentChangedStream // Changes stream
             .Select(Diff)
             .Select(Split)
             .Do(change => _cache.Add(change))
@@ -97,8 +94,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
             .Select(aggregates => aggregates.Reverse()) // Cancel the reverse because aggregate are displayed from top to bottom
             .Select(aggregates => aggregates.ToImmutableArray())
             .Where(s => s.Length != 0)
-            .Subscribe(_changes)
-            .DisposeWith(_disposable);
+            .Select(array => new AddToTop(array));
 
         var filterOrMaskOrErrorTagStream =
             this.WhenAnyValue(vm => vm.Filter, vm => vm.MaskText, vm => vm.ErrorTag, (filter, mask, errorTag1) => (Filter: filter, Mask: mask, ErrorTag: errorTag1))
@@ -107,18 +103,18 @@ public sealed class LogFileViewerVM : Document, IDisposable
                 .DistinctUntilChanged()
                 .Select(data => (Paginator: new Paginator<int>(_cache.Contains(data.Filter), lineCountByPage), data.Mask, data.ErrorTag));
 
-        firstFileContentLoading // Refresh all stream
+        var refreshAll = firstFileContentLoading // Refresh all stream
             .Select(input => (Paginator: new Paginator<int>(input.Cache.Contains(""), lineCountByPage), Mask: "", ErrorTag))
             .Merge(filterOrMaskOrErrorTagStream)
             .Do(data => paginator = data.Paginator)
             .Select(data => (Logs: _cache.FromIndex(data.Paginator.Next()), data.Mask, data.ErrorTag))
             .LogToAggregateStream(DoMaskText)
-            .Subscribe(_refreshAll)
-            .DisposeWith(_disposable);
+            .SelectMany(logs => new IMessage[] { new DeleteAll(), new AddToBottom(logs) });
 
-        NextPage
-            .LogToAggregateStream(DoMaskText)
-            .Subscribe(_pageChanges)
+        changesStream
+            .Merge(refreshAll)
+            .Merge(NextPage)
+            .Subscribe(_refresh)
             .DisposeWith(_disposable);
 
         fileContentChangedStream
@@ -186,5 +182,13 @@ public sealed class LogFileViewerVM : Document, IDisposable
 
     public void Dispose() => _disposable.Dispose();
 }
+
+public record AddToBottom(ImmutableArray<LogLinesAggregate> Logs) : IMessage;
+
+public record AddToTop(ImmutableArray<LogLinesAggregate> Logs) : IMessage;
+
+public record DeleteAll : IMessage;
+
+public interface IMessage;
 
 internal record Data(string NewText, int ActualLength);
