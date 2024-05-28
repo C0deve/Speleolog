@@ -20,7 +20,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
 {
     private readonly CompositeDisposable _disposable = new();
     private Cache _cache = new([]);
-    private readonly BehaviorSubject<IMessage> _refresh = new(new AddToBottom(ImmutableArray<LogLinesAggregate>.Empty));
+    private readonly BehaviorSubject<IMessage> _refresh = new(IMessage.Initial);
     private readonly TimeSpan _throttleTime = TimeSpan.FromMilliseconds(500);
     private int _actualLength;
 
@@ -33,7 +33,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
 
     [Reactive] public long LoadingDuration { get; private set; }
     public ReactiveCommand<Unit, string> Reload { get; }
-    public ReactiveCommand<Unit, IMessage> NextPage { get; }
+    public ReactiveCommand<Unit, AddToBottom> NextPage { get; }
 
     public LogFileViewerVM(
         string filePath,
@@ -44,7 +44,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
         IScheduler? scheduler = null)
     {
         ErrorTag = errorTag;
-        RefreshStream = _refresh.AsObservable();
+        RefreshStream = _refresh.AsObservable().Where(message => message is not Initial);
 
         Filter = string.Empty;
         MaskText = string.Empty;
@@ -56,7 +56,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
         Reload = ReactiveCommand.CreateFromObservable(() =>
             LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler));
 
-        NextPage = ReactiveCommand.CreateFromObservable<IMessage>(() =>
+        NextPage = ReactiveCommand.CreateFromObservable(() =>
             Observable
                 .Return((_cache.FromIndex(paginator.Next()), MaskText, ErrorTag))
                 .LogToAggregateStream(DoMaskText)
@@ -96,23 +96,21 @@ public sealed class LogFileViewerVM : Document, IDisposable
             .Where(s => s.Length != 0)
             .Select(array => new AddToTop(array));
 
-        var filterOrMaskOrErrorTagStream =
-            this.WhenAnyValue(vm => vm.Filter, vm => vm.MaskText, vm => vm.ErrorTag, (filter, mask, errorTag1) => (Filter: filter, Mask: mask, ErrorTag: errorTag1))
-                .SkipUntil(firstFileContentLoading)
-                .Throttle(_throttleTime, taskpoolScheduler)
-                .DistinctUntilChanged()
-                .Select(data => (Paginator: new Paginator<int>(_cache.Contains(data.Filter), lineCountByPage), data.Mask, data.ErrorTag));
-
-        var refreshAll = firstFileContentLoading // Refresh all stream
+        firstFileContentLoading // Clear all stream
             .Select(input => (Paginator: new Paginator<int>(input.Cache.Contains(""), lineCountByPage), Mask: "", ErrorTag))
-            .Merge(filterOrMaskOrErrorTagStream)
             .Do(data => paginator = data.Paginator)
-            .Select(data => (Logs: _cache.FromIndex(data.Paginator.Next()), data.Mask, data.ErrorTag))
-            .LogToAggregateStream(DoMaskText)
-            .SelectMany(logs => new IMessage[] { new DeleteAll(), new AddToBottom(logs) });
+            .ToUnit()
+            .InvokeCommand(NextPage);
+        
+        this.WhenAnyValue(vm => vm.Filter, vm => vm.MaskText, vm => vm.ErrorTag, (filter, _, _) => filter)
+            .SkipUntil(firstFileContentLoading)
+            .Throttle(_throttleTime, taskpoolScheduler)
+            .Do(filter => paginator = new Paginator<int>(_cache.Contains(filter), lineCountByPage))
+            .Do(_ => _refresh.OnNext(IMessage.DeleteAll))
+            .ToUnit()
+            .InvokeCommand(NextPage);
 
-        changesStream
-            .Merge(refreshAll)
+        changesStream.Cast<IMessage>()
             .Merge(NextPage)
             .Subscribe(_refresh)
             .DisposeWith(_disposable);
@@ -182,13 +180,5 @@ public sealed class LogFileViewerVM : Document, IDisposable
 
     public void Dispose() => _disposable.Dispose();
 }
-
-public record AddToBottom(ImmutableArray<LogLinesAggregate> Logs) : IMessage;
-
-public record AddToTop(ImmutableArray<LogLinesAggregate> Logs) : IMessage;
-
-public record DeleteAll : IMessage;
-
-public interface IMessage;
 
 internal record Data(string NewText, int ActualLength);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Reactive.Linq;
 
 namespace SpeleoLogViewer.LogFileViewer;
@@ -13,5 +14,6 @@ public static class Extensions
         input
             .Select(data => (Logs: maskText(data.Mask, data.Logs), data.ErrorTag))
             .Select(data => LogAggregator.Aggregate(data.Logs, data.ErrorTag))
+            .Where(aggregates => aggregates.Any())
             .Select(aggregates => aggregates.ToImmutableArray());
 }

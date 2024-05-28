@@ -42,10 +42,10 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
     private IDisposable? SubscribeToRefresh() =>
         ViewModel?
             .RefreshStream
-            .Merge(ViewModel.NextPage)
             .ObserveOn(RxApp.MainThreadScheduler)
             .Do(message =>
             {
+                Log(message);
                 switch (message)
                 {
                     case DeleteAll:
@@ -62,6 +62,24 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
                 }
             })
             .Subscribe();
+
+    private static void Log(IMessage message)
+    {
+        switch (message)
+        {
+            case AddToBottom addToBottom:
+                Console.WriteLine($"addToBottom {addToBottom.Logs.Length} aggregat");
+                break;
+            case AddToTop addToTop:
+                Console.WriteLine($"addToTop {addToTop.Logs.Length} aggregat");
+                break;
+            case DeleteAll deleteAll:
+                Console.WriteLine("delete all");
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(message));
+        }
+    }
 
     private void AddLinesToBottom(AddToBottom lines)
     {

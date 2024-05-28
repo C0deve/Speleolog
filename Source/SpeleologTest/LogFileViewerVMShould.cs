@@ -37,20 +37,21 @@ public class LogFileViewerVMShould
     }
 
     [Fact]
-    public void EmitRefreshAllPagedOnCreation()
+    public void EmitAddToBottomOnCreation()
     {
         var emitter = new Subject<Unit>();
         var scheduler = new TestScheduler();
-        AddToBottom? message = null;
+        List<IMessage> messages = [];
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["A", "B", "C"]), 2, ErrorTag,
             scheduler);
 
         scheduler.AdvanceBy(OperationDelay.Ticks);
-        sut.RefreshStream.WhereIs<AddToBottom>().Subscribe(s => message = s);
+        sut.RefreshStream.Subscribe(s => messages.Add(s));
 
-        message
-            .ShouldNotBeNull()
+        messages
+            .ShouldHaveSingleItem()
+            .ShouldBeOfType<AddToBottom>()
             .Logs
             .ToStringArray()
             .Length
@@ -105,7 +106,7 @@ public class LogFileViewerVMShould
     public void EmitRefreshAllOnFilterChanged()
     {
         var emitter = new Subject<Unit>();
-        AddToBottom? message = null;
+        List<IMessage> messages = [];
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["mask A", "B masK", "CMASK", "coucou"]), 300, ErrorTag,
@@ -113,14 +114,17 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut
             .RefreshStream
-            .WhereIs<AddToBottom>()
-            .Subscribe(s => message = s);
+            .Skip(1) // skip first refresh from constructor
+            .Subscribe(s => messages.Add(s));
 
         sut.Filter = "mask";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
-        message
-            .ShouldNotBeNull()
+        messages.Count.ShouldBe(2);
+
+        messages[0].ShouldBeOfType<DeleteAll>();
+        messages[1]
+            .ShouldBeOfType<AddToBottom>()
             .Logs
             .ToStringArray().ShouldBe(["CMASK", "B masK", "mask A"]);
     }
@@ -154,21 +158,29 @@ public class LogFileViewerVMShould
     public void EmitRefreshAllOnResetFilter()
     {
         var emitter = new Subject<Unit>();
-        AddToBottom? message = null;
+        List<IMessage> messages = [];
         var scheduler = new TestScheduler();
-        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new TextFileLoaderForTest(["coucou", "mask A"]), 300, ErrorTag,
+        using var sut = new LogFileViewerVM(
+            "",
+            emitter.AsObservable(),
+            new TextFileLoaderForTest(["coucou", "mask A"]), 
+            300,
+            ErrorTag,
             scheduler);
-        sut.RefreshStream.WhereIs<AddToBottom>().Subscribe(s => message = s);
+        sut
+            .RefreshStream
+            .Subscribe(s => messages.Add(s));
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.Filter = "mask";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
-
+        
         sut.Filter = "";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
-        message
-            .ShouldNotBeNull()
+        messages.Count.ShouldBe(5); // AddToBottomn, DeleteAll, AddToBottomn, DeleteAll, AddToBottomn 
+        messages[3].ShouldBeOfType<DeleteAll>();
+        messages[4]
+            .ShouldBeOfType<AddToBottom>()
             .Logs
             .ToStringArray().ShouldBe(["mask A", "coucou"]);
     }
@@ -488,7 +500,7 @@ public class LogFileViewerVMShould
             .Logs
             .ToStringArray().ShouldBe(["E"]);
     }
-    
+
     [Fact]
     public void EmitPageChangesOnDisplayNextPageAfterFileArchiving()
     {
