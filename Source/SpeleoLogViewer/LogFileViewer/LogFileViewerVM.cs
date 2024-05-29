@@ -10,6 +10,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
+using System.Threading.Tasks;
 using Dock.Model.ReactiveUI.Controls;
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
@@ -32,8 +33,9 @@ public sealed class LogFileViewerVM : Document, IDisposable
     [Reactive] public string ErrorTag { get; set; }
 
     [Reactive] public long LoadingDuration { get; private set; }
-    public ReactiveCommand<Unit, string> Reload { get; }
+    public ReactiveCommand<Unit, string> Load { get; }
     public ReactiveCommand<Unit, AddToBottom> NextPage { get; }
+    private ReactiveCommand<Data, AddToTop> GetChanges { get; }
 
     public LogFileViewerVM(
         string filePath,
@@ -53,8 +55,10 @@ public sealed class LogFileViewerVM : Document, IDisposable
         var paginator = new Paginator<int>(Enumerable.Empty<int>(), lineCountByPage);
         var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
 
-        Reload = ReactiveCommand.CreateFromObservable(() =>
-            LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler));
+        Load = ReactiveCommand.CreateFromTask(
+            () => LoadFileContentAsync(filePath, textFileLoader),
+            outputScheduler: taskpoolScheduler
+        );
 
         NextPage = ReactiveCommand.CreateFromObservable(() =>
             Observable
@@ -63,27 +67,8 @@ public sealed class LogFileViewerVM : Document, IDisposable
                 .Select(array => new AddToBottom(array))
         );
 
-        var firstFileContentLoading =
-            LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler) // File loading on creation
-                .Select(s => (Split: Split(s), TotalLength: s.Length))
-                .Select(input => (Cache: new Cache(input.Split), input.TotalLength))
-                .Do(input =>
-                {
-                    _cache = input.Cache;
-                    _actualLength = input.TotalLength;
-                })
-                .Publish();
-
-        var fileContentChangedStream =
-            fileChangedStream // changes fromm file system stream
-                .SkipUntil(firstFileContentLoading)
-                .Select(_ => LoadFileContentAsync(filePath, textFileLoader, taskpoolScheduler))
-                .Concat()
-                .Merge(Reload)
-                .Select(newText => new Data(newText, _actualLength))
-                .Publish();
-
-        var changesStream = fileContentChangedStream // Changes stream
+        GetChanges = ReactiveCommand.CreateFromObservable<Data, AddToTop>(data => Observable
+            .Return(data)
             .Select(Diff)
             .Select(Split)
             .Do(change => _cache.Add(change))
@@ -94,34 +79,46 @@ public sealed class LogFileViewerVM : Document, IDisposable
             .Select(aggregates => aggregates.Reverse()) // Cancel the reverse because aggregate are displayed from top to bottom
             .Select(aggregates => aggregates.ToImmutableArray())
             .Where(s => s.Length != 0)
-            .Select(array => new AddToTop(array));
+            .Select(array => new AddToTop(array))
+        );
 
-        firstFileContentLoading // Clear all stream
-            .Select(input => (Paginator: new Paginator<int>(input.Cache.Contains(""), lineCountByPage), Mask: "", ErrorTag))
-            .Do(data => paginator = data.Paginator)
+        var initialLoad = Load.Take(1);
+
+        initialLoad
+            .Select(s => (Split: Split(s), TotalLength: s.Length))
+            .Select(input => (Cache: new Cache(input.Split), input.TotalLength))
+            .Do(input =>
+            {
+                _cache = input.Cache;
+                _actualLength = input.TotalLength;
+                paginator = new Paginator<int>(input.Cache.Contains(""), lineCountByPage);
+            })
             .ToUnit()
             .InvokeCommand(NextPage);
-        
+
+        Load
+            .SkipUntil(initialLoad)
+            .Select(newText => new Data(newText, _actualLength))
+            .InvokeCommand(GetChanges);
+
+        fileChangedStream // changes fromm file system stream
+            .SkipUntil(initialLoad)
+            .InvokeCommand(Load);
+
         this.WhenAnyValue(vm => vm.Filter, vm => vm.MaskText, vm => vm.ErrorTag, (filter, _, _) => filter)
-            .SkipUntil(firstFileContentLoading)
+            .SkipUntil(initialLoad)
             .Throttle(_throttleTime, taskpoolScheduler)
             .Do(filter => paginator = new Paginator<int>(_cache.Contains(filter), lineCountByPage))
             .Do(_ => _refresh.OnNext(IMessage.DeleteAll))
             .ToUnit()
             .InvokeCommand(NextPage);
 
-        changesStream.Cast<IMessage>()
+        GetChanges.Cast<IMessage>()
             .Merge(NextPage)
             .Subscribe(_refresh)
             .DisposeWith(_disposable);
 
-        fileContentChangedStream
-            .Connect()
-            .DisposeWith(_disposable);
-
-        firstFileContentLoading
-            .Connect()
-            .DisposeWith(_disposable);
+        Load.Execute().Subscribe();
     }
 
 
@@ -151,18 +148,15 @@ public sealed class LogFileViewerVM : Document, IDisposable
             .Where(line => line.Contains(filter, StringComparison.InvariantCultureIgnoreCase));
     }
 
-    private IObservable<string> LoadFileContentAsync(string filePath, ITextFileLoader textFileLoader, IScheduler taskpoolScheduler) =>
-        Observable.FromAsync(async () =>
-        {
-            using (new Watcher("File loading"))
-            {
-                var watch = Stopwatch.StartNew();
-                var textAsync = await textFileLoader.GetTextAsync(filePath, CancellationToken.None);
-                watch.Stop();
-                LoadingDuration = watch.ElapsedMilliseconds;
-                return textAsync;
-            }
-        }, taskpoolScheduler);
+    private async Task<string> LoadFileContentAsync(string filePath, ITextFileLoader textFileLoader)
+    {
+        using var watcher = new Watcher("File loading");
+        var watch = Stopwatch.StartNew();
+        var textAsync = await textFileLoader.GetTextAsync(filePath, CancellationToken.None);
+        watch.Stop();
+        LoadingDuration = watch.ElapsedMilliseconds;
+        return textAsync;
+    }
 
 
     private static string Diff(Data input)

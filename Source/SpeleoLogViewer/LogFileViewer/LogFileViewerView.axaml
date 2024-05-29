@@ -70,7 +70,7 @@
                 <Run Text="{Binding LoadingDuration}" />
                 ms</TextBlock>
             <Button
-                Command="{Binding Reload}"
+                Command="{Binding Load}"
                 Content="Recharger"
                 Grid.Column="2" />
             <TextBox

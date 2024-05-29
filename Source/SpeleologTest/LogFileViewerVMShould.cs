@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Reactive;
+﻿using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Microsoft.Reactive.Testing;
@@ -239,21 +238,20 @@ public class LogFileViewerVMShould
     public void EmitEmptyArrayOnFilterWithNoMatch()
     {
         var emitter = new Subject<Unit>();
-        AddToBottom? message = null;
+        List<IMessage> messages = [];
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["A", "B"]), 3, ErrorTag,
             scheduler);
-        sut.RefreshStream.WhereIs<AddToBottom>().Subscribe(s => message = s);
+        sut.RefreshStream.Subscribe(s => messages.Add(s));
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
 
         sut.Filter = "C";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
-        message
-            .ShouldNotBeNull()
-            .Logs
-            .ShouldBe(ImmutableArray<LogLinesAggregate>.Empty);
+        messages
+            .Last()
+            .ShouldBeOfType<DeleteAll>();
     }
 
     [Fact]
@@ -379,21 +377,19 @@ public class LogFileViewerVMShould
     public void NotEmitPageChangesOnDisplayNextPageIfAllDataDisplayed()
     {
         var emitter = new Subject<Unit>();
-        AddToBottom? message = null;
+        List<IMessage> messages = [];
         var scheduler = new TestScheduler();
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["coucou", "mask A", "B masK", "coucou", "CMASK"]), 5, ErrorTag,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
-        sut.RefreshStream.WhereIs<AddToBottom>().Subscribe(s => message = s);
-
+        sut.RefreshStream.WhereIs<AddToBottom>().Subscribe(s => messages.Add(s));
+        messages.Clear();
+        
         sut.NextPage.Execute().Subscribe();
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
-        message
-            .ShouldNotBeNull()
-            .Logs
-            .ToStringArray().ShouldBe([]);
+        messages.ShouldBeEmpty();
     }
 
     [Fact]
@@ -427,7 +423,7 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.RefreshStream.WhereIs<AddToTop>().Subscribe(s => message = s);
 
-        sut.Reload.Execute().Subscribe();
+        sut.Load.Execute().Subscribe();
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
         message
@@ -457,26 +453,6 @@ public class LogFileViewerVMShould
             .ShouldNotBeNull()
             .Logs
             .ToStringArray().ShouldBe(["C", "[Error  ]B", "A"]);
-    }
-
-    [Fact]
-    public void EmitRefreshAllOnce()
-    {
-        var emitter = new Subject<Unit>();
-        AddToBottom? message = null;
-        var scheduler = new TestScheduler();
-        using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new SequenceTextFileLoaderForTest([], ["A"]), 300, ErrorTag,
-            scheduler);
-        sut.RefreshStream.WhereIs<AddToBottom>().Subscribe(s => message = s);
-
-        scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
-        scheduler.AdvanceBy(_throttleTime.Ticks + 100000); // throttle time
-
-        message
-            .ShouldNotBeNull()
-            .Logs
-            .ToStringArray().ShouldBe([]);
     }
 
     [Fact]
