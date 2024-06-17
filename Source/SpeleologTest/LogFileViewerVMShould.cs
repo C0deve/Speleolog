@@ -27,7 +27,7 @@ public class LogFileViewerVMShould
             scheduler);
 
         scheduler.AdvanceBy(OperationDelay.Ticks);
-        sut.RefreshStream.WhereIs<AddToBottom>().Subscribe(s => message = s);
+        sut.RefreshStream.Is<AddToBottom>().Subscribe(s => message = s);
 
         message
             .ShouldNotBeNull()
@@ -68,7 +68,7 @@ public class LogFileViewerVMShould
             new SequenceTextFileLoaderForTest([""], lines), 300, ErrorTag,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
-        sut.RefreshStream.WhereIs<AddToTop>().Subscribe(s => message = s);
+        sut.RefreshStream.Is<AddToTop>().Subscribe(s => message = s);
 
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks);
@@ -90,7 +90,7 @@ public class LogFileViewerVMShould
             new SequenceTextFileLoaderForTest(["A"], lines), 300, ErrorTag,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
-        sut.RefreshStream.WhereIs<AddToTop>().Subscribe(s => message = s);
+        sut.RefreshStream.Is<AddToTop>().Subscribe(s => message = s);
 
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
@@ -140,7 +140,7 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut
             .RefreshStream
-            .WhereIs<AddToTop>().Subscribe(s => message = s);
+            .Is<AddToTop>().Subscribe(s => message = s);
         sut.Filter = "mask";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
 
@@ -193,7 +193,7 @@ public class LogFileViewerVMShould
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new TextFileLoaderForTest(["coucou", "mask A"]), 1, ErrorTag,
             scheduler);
-        sut.RefreshStream.WhereIs<AddToBottom>().Subscribe(s => message = s);
+        sut.RefreshStream.Is<AddToBottom>().Subscribe(s => message = s);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.Filter = "mask";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
@@ -222,7 +222,7 @@ public class LogFileViewerVMShould
         sut.NextPage.Execute().Subscribe();
         sut.Filter = "mask";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
-        sut.RefreshStream.WhereIs<AddToBottom>().Subscribe(s => message = s);
+        sut.RefreshStream.Is<AddToBottom>().Subscribe(s => message = s);
 
         sut.Filter = "";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
@@ -265,7 +265,7 @@ public class LogFileViewerVMShould
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.RefreshStream
-            .WhereIs<AddToBottom>()
+            .Is<AddToBottom>()
             .Subscribe(s => message = s);
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks);
@@ -290,7 +290,7 @@ public class LogFileViewerVMShould
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.RefreshStream
-            .WhereIs<AddToBottom>()
+            .Is<AddToBottom>()
             .Subscribe(s => message = s);
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks);
@@ -314,7 +314,7 @@ public class LogFileViewerVMShould
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new SequenceTextFileLoaderForTest(["coucou"], ["coucou", "mask A", "B masK", "coucou", "CMASK"]), 300, ErrorTag,
             scheduler);
-        sut.RefreshStream.WhereIs<AddToTop>().Subscribe(s => message = s);
+        sut.RefreshStream.Is<AddToTop>().Subscribe(s => message = s);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.MaskText = "mask";
         scheduler.AdvanceBy(_throttleTime.Ticks); // throttle time
@@ -337,7 +337,7 @@ public class LogFileViewerVMShould
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
             new SequenceTextFileLoaderForTest(["coucou"], ["coucou", "filterA", "Mask filterB"]), 300, ErrorTag,
             scheduler);
-        sut.RefreshStream.WhereIs<AddToTop>().Subscribe(s => message = s);
+        sut.RefreshStream.Is<AddToTop>().Subscribe(s => message = s);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.MaskText = "mask";
         sut.Filter = "filter";
@@ -362,7 +362,7 @@ public class LogFileViewerVMShould
             new TextFileLoaderForTest(["coucou", "mask A", "B masK", "coucou", "CMASK"]), 2, ErrorTag,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
-        sut.RefreshStream.WhereIs<AddToBottom>().Subscribe(s => message = s);
+        sut.RefreshStream.Is<AddToBottom>().Subscribe(s => message = s);
 
         sut.NextPage.Execute().Subscribe();
         scheduler.AdvanceBy(OperationDelay.Ticks);
@@ -383,7 +383,7 @@ public class LogFileViewerVMShould
             new TextFileLoaderForTest(["coucou", "mask A", "B masK", "coucou", "CMASK"]), 5, ErrorTag,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
-        sut.RefreshStream.WhereIs<AddToBottom>().Subscribe(s => messages.Add(s));
+        sut.RefreshStream.Is<AddToBottom>().Subscribe(s => messages.Add(s));
         messages.Clear();
         
         sut.NextPage.Execute().Subscribe();
@@ -421,7 +421,7 @@ public class LogFileViewerVMShould
             new SequenceTextFileLoaderForTest([""], lines), 300, ErrorTag,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
-        sut.RefreshStream.WhereIs<AddToTop>().Subscribe(s => message = s);
+        sut.RefreshStream.Is<AddToTop>().Subscribe(s => message = s);
 
         sut.Load.Execute().Subscribe();
         scheduler.AdvanceBy(OperationDelay.Ticks);
@@ -443,7 +443,7 @@ public class LogFileViewerVMShould
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.RefreshStream
-            .WhereIs<AddToBottom>()
+            .Is<AddToBottom>()
             .Subscribe(s => message = s);
 
         sut.ErrorTag = "[Error  ]";
@@ -465,7 +465,7 @@ public class LogFileViewerVMShould
             new SequenceTextFileLoaderForTest(["A", "B"], ["E"]), 300, ErrorTag,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
-        sut.RefreshStream.WhereIs<AddToTop>().Subscribe(s => message = s);
+        sut.RefreshStream.Is<AddToTop>().Subscribe(s => message = s);
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks);
 
@@ -489,7 +489,7 @@ public class LogFileViewerVMShould
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         emitter.OnNext(Unit.Default);
         scheduler.AdvanceBy(OperationDelay.Ticks);
-        sut.RefreshStream.WhereIs<AddToBottom>().Subscribe(s => message = s);
+        sut.RefreshStream.Is<AddToBottom>().Subscribe(s => message = s);
 
         sut.NextPage.Execute().Subscribe();
         scheduler.AdvanceBy(OperationDelay.Ticks);

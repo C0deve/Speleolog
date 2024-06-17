@@ -4,6 +4,6 @@ namespace SpeleoLogViewer.FileChanged;
 
 public interface ISchedulerProvider
 {
-    IScheduler CurrentThread { get; }
-    IScheduler Default { get; }
+    IScheduler MainThreadScheduler { get; }
+    IScheduler TaskpoolScheduler { get; }
 }

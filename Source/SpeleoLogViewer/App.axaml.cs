@@ -23,11 +23,11 @@ public partial class App : Application
 
             desktop.MainWindow.Closing += (_, _) =>
             {
-                var state = new SpeleologState(
-                    (desktopMainWindow.ViewModel?.OpenFiles ?? Enumerable.Empty<string>()).ToList(), 
-                    desktopMainWindow.ViewModel?.AppendFromBottom ?? true);
+                if(desktopMainWindow.ViewModel is null) return;
+                
+                var state = desktopMainWindow.ViewModel.GetState();
                 _ = new SpeleologStateRepository().SaveAsync(state);
-                desktopMainWindow.ViewModel?.CloseLayout();
+                desktopMainWindow.ViewModel.CloseLayout();
             };
             desktop.Exit += (_, _) => { desktopMainWindow.ViewModel?.CloseLayout(); };
         }

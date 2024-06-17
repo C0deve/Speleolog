@@ -2,4 +2,4 @@
 
 namespace SpeleoLogViewer.ApplicationState;
 
-public record SpeleologState(List<string> LastOpenFiles, bool AppendFromBottom = true);
+public record SpeleologState(List<string> LastOpenFiles, bool AppendFromBottom = true, string TemplateFolder = "");

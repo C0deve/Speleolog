@@ -4,7 +4,7 @@ using SpeleoLogViewer.ApplicationState;
 
 namespace SpeleologTest;
 
-public class ParameterRepositoryShould
+public class SpeleologStateRepositoryShould
 {
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -32,6 +32,17 @@ public class ParameterRepositoryShould
             .ShouldNotBeNull()
             .AppendFromBottom
             .ShouldBeTrue();
+    }
+    
+    [Fact]
+    public async Task ReadFileV3()
+    {
+        var param = await File.ReadAllTextAsync("Speleologv3.json");
+        JsonSerializer
+            .Deserialize<SpeleologState>(param, Options)
+            .ShouldNotBeNull()
+            .TemplateFolder
+            .ShouldBe("pathToTheFolder");
     }
 
     [Fact]

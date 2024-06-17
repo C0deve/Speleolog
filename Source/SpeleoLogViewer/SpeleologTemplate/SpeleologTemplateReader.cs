@@ -8,7 +8,7 @@ namespace SpeleoLogViewer.SpeleologTemplate;
 
 public class SpeleologTemplateReader : ISpeleologTemplateReader
 {
-    private const string Extension = ".speleolog";
+    public const string Extension = ".speleolog";
 
     public bool IsTemplateFile(string filePath) =>
         Path.GetExtension(filePath).Equals(Extension, StringComparison.InvariantCultureIgnoreCase);

@@ -19,6 +19,16 @@
     <DockPanel DragDrop.AllowDrop="True" LastChildFill="True">
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">
             <Button Command="{Binding OpenFileCommand}">Open File</Button>
+            <ComboBox
+                ItemsSource="{Binding TemplateInfosList}"
+                PlaceholderText="Selection template"
+                SelectedItem="{Binding CurrentTemplate, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
         </StackPanel>
         <ListBox DockPanel.Dock="Bottom" ItemsSource="{Binding ErrorMessages}" />
         <DockControl Layout="{Binding Layout}" Margin="4" />

@@ -23,7 +23,8 @@ public partial class MainWindow : Window
             FileSystemWatcherFactory, 
             new SpeleologStateRepository(), 
             new SchedulerProvider(), 
-            new SpeleologTemplateReader());
+            new SpeleologTemplateReader(), 
+            new FolderTemplateReader());
     }
 
     private static FileSystemChangedWatcher FileSystemWatcherFactory(string directoryPath) =>
