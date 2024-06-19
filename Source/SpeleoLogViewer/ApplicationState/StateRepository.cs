@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 
 namespace SpeleoLogViewer.ApplicationState;
 
-public class SpeleologStateRepository : ISpeleologStateRepository
+public class StateRepository
 {
     private const string FilePath = "SpeleologStateV1.json";
 
-    private readonly JsonSerializerOptions _options = new()
+    private readonly JsonSerializerOptions? _options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
@@ -25,6 +25,13 @@ public class SpeleologStateRepository : ISpeleologStateRepository
     {
         if (!File.Exists(FilePath)) return null;
         var param = await File.ReadAllTextAsync(FilePath, token).ConfigureAwait(false);
+        return JsonSerializer.Deserialize<SpeleologState>(param, _options);
+    }
+
+    public SpeleologState? Get()
+    {
+        if (!File.Exists(FilePath)) return null;
+        var param = File.ReadAllText(FilePath);
         return JsonSerializer.Deserialize<SpeleologState>(param, _options);
     }
 }

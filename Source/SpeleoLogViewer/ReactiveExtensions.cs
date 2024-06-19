@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reactive;
 using System.Reactive.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SpeleoLogViewer;
@@ -30,6 +31,11 @@ public static class ReactiveExtensions
     public static IObservable<TResult> SelectAsync<TSource, TResult>(this IObservable<TSource> source, Func<TSource, Task<TResult>> selector) =>
         source
             .Select(x => Observable.FromAsync(() => selector(x)))
+            .Switch();
+
+    public static IObservable<Unit> SelectAsync<TSource>(this IObservable<TSource> source, Func<TSource, CancellationToken, Task> selector) =>
+        source
+            .Select(x => Observable.FromAsync(token => selector(x, token)))
             .Switch();
 
 

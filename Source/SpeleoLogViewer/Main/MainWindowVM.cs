@@ -31,25 +31,22 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
     private readonly ISpeleologTemplateReader _templateReader;
     private readonly DockFactory _factory;
     private readonly FileChangedObservableFactory _fileChangedObservableFactory;
-    
 
     public IRootDock Layout { get; }
     public ObservableCollection<string> ErrorMessages { get; } = [];
     public ReactiveCommand<Unit, Unit> OpenFileCommand { get; }
-    private ReactiveCommand<Unit, SpeleologState?> OpenStateCommand { get; }
     private ReactiveCommand<string, IReadOnlyList<TemplateInfos>> ReadTemplateFolder { get; }
     [Reactive] public TemplateInfos? CurrentTemplate { get; set; }
 
     private readonly ObservableAsPropertyHelper<IReadOnlyList<TemplateInfos>> _templateInfosList;
     public IReadOnlyList<TemplateInfos> TemplateInfosList => _templateInfosList.Value;
 
-    private readonly ObservableAsPropertyHelper<SpeleologState> _state;
-    public SpeleologState State => _state.Value;
-    
+    public SpeleologState State { get; }
+
     public MainWindowVM(IStorageProvider storageProvider,
         ITextFileLoader textFileLoader,
         Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory,
-        ISpeleologStateRepository speleologStateRepository,
+        SpeleologState state,
         ISchedulerProvider schedulerProvider,
         ISpeleologTemplateReader templateReader,
         FolderTemplateReader folderTemplateReader)
@@ -59,53 +56,38 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         _schedulerProvider = schedulerProvider;
         _templateReader = templateReader;
         _factory = new DockFactory();
+        State = state with { LastOpenFiles = [] };
         Layout = _factory.CreateLayout();
         _factory.InitLayout(Layout);
         _factory.DockableClosed += (_, args) =>
         {
-            if (args.Dockable is LogFileViewerVM logViewModel)
-                State.LastOpenFiles.Remove(logViewModel.FilePath);
+            if (args.Dockable is not LogFileViewerVM logViewModel) return;
+            
+            State.LastOpenFiles.Remove(logViewModel.FilePath);
+            logViewModel.Dispose();
         };
 
         _fileChangedObservableFactory = new FileChangedObservableFactory(fileSystemObserverFactory);
 
         OpenFileCommand = ReactiveCommand.CreateFromTask(OpenFile);
-        
+
         ReadTemplateFolder = ReactiveCommand.Create<string, IReadOnlyList<TemplateInfos>>(folderTemplateReader.Read);
         _templateInfosList = ReadTemplateFolder
             .ToProperty(this, nameof(TemplateInfosList))
             .DisposeWith(_disposables);
 
-        OpenStateCommand = ReactiveCommand.CreateFromTask(speleologStateRepository.GetAsync);
-        OpenStateCommand
+        this.WhenAnyValue(vm => vm.CurrentTemplate, infos => infos is null 
+                ? null 
+                : new List<string> { infos.Path })
             .IsNotNull()
-            .Select(state => state.TemplateFolder)
-            .IsNotEmpty()
-            .InvokeCommand(ReadTemplateFolder)
-            .DisposeWith(_disposables);
-
-        OpenStateCommand
-            .IsNotNull()
-            .SelectMany(state => state.LastOpenFiles)
-            .Do(CreateAndDock)
+            .Merge(Observable.Return(state.LastOpenFiles))
+            .SelectAsync(OpenFilesFromPathAsync)
             .Subscribe()
-            .DisposeWith(_disposables);
-
-        _state = OpenStateCommand
-            .IsNotNull()
-            .ToProperty(this, nameof(State))
             .DisposeWith(_disposables);
         
-        OpenStateCommand
-            .Execute()
-            .Subscribe()
-            .DisposeWith(_disposables);
-
-        this.WhenAnyValue(vm => vm.CurrentTemplate)
-            .WhereNotNull()
-            .Select(infos => infos.Path)
-            .Do(CreateAndDock)
-            .Subscribe()
+        Observable
+            .Return(State.TemplateFolder)
+            .InvokeCommand(ReadTemplateFolder)
             .DisposeWith(_disposables);
     }
 
@@ -116,23 +98,23 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         e.Handled = true;
         if (result is null) return;
 
-        _ = OpenFilesFromPath(result.Where(item => item is IStorageFile).Cast<IStorageFile>(), default);
+        _ = OpenFilesFromPathAsync(result.Where(item => item is IStorageFile).Cast<IStorageFile>().Select(file => file.Path.LocalPath), default);
     }
 
     private async Task OpenFile(CancellationToken token)
     {
         var files = await DoOpenFilePickerAsync();
-        await OpenFilesFromPath(files, token);
+        await OpenFilesFromPathAsync(files.Select(file => file.Path.LocalPath), token);
     }
 
     public void Dispose() => _disposables.Dispose();
 
-    private async Task OpenFilesFromPath(IEnumerable<IStorageFile> files, CancellationToken token)
+    private async Task OpenFilesFromPathAsync(IEnumerable<string> filesPath, CancellationToken token)
     {
         ErrorMessages.Clear();
         try
         {
-            foreach (var givenFilePath in files.Select(file => file.Path.LocalPath))
+            foreach (var givenFilePath in filesPath)
             {
                 if (_templateReader.IsTemplateFile(givenFilePath))
                     foreach (var pathFromTemplate in await GetFilesFromTemplate(givenFilePath, token))
@@ -154,7 +136,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         _storageProvider
             .OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Open AllLines File",
+                Title = "Select log file(s)",
                 AllowMultiple = true
             });
 
@@ -198,6 +180,4 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         e.DragEffects = DragDropEffects.None;
         e.Handled = true;
     }
-
-    public SpeleologState GetState() => State;
 }

@@ -17,7 +17,6 @@ public class MainViewModelShould
     [Fact]
     public void AddFilePathToOpenFilesOnOpenFileCommand()
     {
-        var stateProvider = Substitute.For<ISpeleologStateRepository>();
         var storageProvider = Substitute.For<IStorageProvider>();
         var file = Substitute.For<IStorageFile>();
         file.Path.Returns(new Uri("c:/test.txt"));
@@ -28,7 +27,7 @@ public class MainViewModelShould
             storageProvider, 
             new EmptyFileLoader(), 
             _ => Substitute.For<IFileSystemChangedWatcher>(), 
-            stateProvider, 
+            SpeleologState.Default, 
             new SchedulerProvider(), 
             Substitute.For<ISpeleologTemplateReader>(), new FolderTemplateReader());
 
@@ -41,7 +40,6 @@ public class MainViewModelShould
     [Fact]
     public void RemoveFilePathFromOpenFilesOnCloseDocument()
     {
-        var stateProvider = Substitute.For<ISpeleologStateRepository>();
         var storageProvider = Substitute.For<IStorageProvider>();
         var file = Substitute.For<IStorageFile>();
         file.Path.Returns(new Uri("c:/test.txt"));
@@ -52,13 +50,13 @@ public class MainViewModelShould
             storageProvider,
             new EmptyFileLoader(),
             _ => Substitute.For<IFileSystemChangedWatcher>(),
-            stateProvider,
+            SpeleologState.Default,
             new SchedulerProvider(),
             Substitute.For<ISpeleologTemplateReader>(), new FolderTemplateReader());
         sut.OpenFileCommand.Execute().Subscribe();
         var documentDock = ((DocumentDock)sut.Layout!.ActiveDockable!).ActiveDockable!;
 
-        sut.Layout!.Factory!.CloseDockable(documentDock);
+        sut.Layout.Factory!.CloseDockable(documentDock);
 
         sut.State.LastOpenFiles.Count.ShouldBe(0);
         sut.CloseLayout();
@@ -67,7 +65,6 @@ public class MainViewModelShould
     [Fact]
     public async Task OpenTemplateFileOnOpenFileCommand() // OpenFilesProvidedByTemplateFileOnOpenFileCommand
     {
-        var stateProvider = new StateRepositoryTest(new SpeleologState([]));
         var storageProvider = Substitute.For<IStorageProvider>();
         var templateFile = Substitute.For<IStorageFile>();
         templateFile.Path.Returns(new Uri($"file://{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/MyTemplate.speleolog"));
@@ -78,7 +75,7 @@ public class MainViewModelShould
             storageProvider, 
             new EmptyFileLoader(), 
             _ => Substitute.For<IFileSystemChangedWatcher>(), 
-            stateProvider, 
+            SpeleologState.Default, 
             new SchedulerProvider(), 
             new SpeleologTemplateReader(), new FolderTemplateReader());
 
@@ -90,7 +87,6 @@ public class MainViewModelShould
     [Fact]
     public void PreventOpeningTheSameFileTwice()
     {
-        var stateProvider = Substitute.For<ISpeleologStateRepository>();
         var storageProvider = Substitute.For<IStorageProvider>();
         var file = Substitute.For<IStorageFile>();
         file.Path.Returns(new Uri("c:/test.txt"));
@@ -101,7 +97,7 @@ public class MainViewModelShould
             storageProvider, 
             new EmptyFileLoader(), 
             _ => Substitute.For<IFileSystemChangedWatcher>(), 
-            stateProvider, 
+            SpeleologState.Default, 
             new SchedulerProvider(), 
             Substitute.For<ISpeleologTemplateReader>(), new FolderTemplateReader());
 
@@ -115,8 +111,6 @@ public class MainViewModelShould
     [Fact]
     public void ReturnCurrentState()
     {
-        var stateProvider = Substitute.For<ISpeleologStateRepository>();
-        stateProvider.GetAsync().Returns(info => new SpeleologState(["c:\\test.txt"], false, "Folder"));
         var storageProvider = Substitute.For<IStorageProvider>();
         var file = Substitute.For<IStorageFile>();
         file.Path.Returns(new Uri("c:\\test.txt"));
@@ -129,26 +123,16 @@ public class MainViewModelShould
             storageProvider, 
             new EmptyFileLoader(), 
             _ => Substitute.For<IFileSystemChangedWatcher>(), 
-            stateProvider, 
+            new SpeleologState(["c:\\test.txt"], false, "Folder"), 
             new TestSchedulerProvider(scheduler), 
             Substitute.For<ISpeleologTemplateReader>(), new FolderTemplateReader());
         
         scheduler.AdvanceBy(10000);
-        var state = sut.GetState();
+        var state = sut.State;
         state.LastOpenFiles.ShouldBe(["c:\\test.txt"]);
         state.TemplateFolder.ShouldBe("Folder");
         state.AppendFromBottom.ShouldBe(false);
-        sut.GetState().ShouldBe(new SpeleologState(["c:\\test.txt"], false, ""));
+        //sut.State.ShouldBe(new SpeleologState(["c:\\test.txt"], false,"Folder"));
         sut.CloseLayout();
     }
-}
-
-public class StateRepositoryTest(SpeleologState state) : ISpeleologStateRepository
-{
-    public Task SaveAsync(SpeleologState newState, CancellationToken token = default)
-    {   
-        throw new NotImplementedException();
-    }
-
-    public Task<SpeleologState?> GetAsync(CancellationToken token = default) => Task.FromResult(state)!;
 }

@@ -82,9 +82,8 @@ public sealed class LogFileViewerVM : Document, IDisposable
             .Select(array => new AddToTop(array))
         );
 
-        var initialLoad = Load.Take(1);
-
-        initialLoad
+        var initialLoad = Load
+            .Take(1)
             .Select(s => (Split: Split(s), TotalLength: s.Length))
             .Select(input => (Cache: new Cache(input.Split), input.TotalLength))
             .Do(input =>
@@ -94,7 +93,9 @@ public sealed class LogFileViewerVM : Document, IDisposable
                 paginator = new Paginator<int>(input.Cache.Contains(""), lineCountByPage);
             })
             .ToUnit()
-            .InvokeCommand(NextPage);
+            .Publish();
+
+        initialLoad.InvokeCommand(NextPage);
 
         Load
             .SkipUntil(initialLoad)
@@ -118,6 +119,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
             .Subscribe(_refresh)
             .DisposeWith(_disposable);
 
+        initialLoad.Connect().DisposeWith(_disposable);
         Load.Execute().Subscribe();
     }
 
@@ -172,7 +174,11 @@ public sealed class LogFileViewerVM : Document, IDisposable
     private static IEnumerable<string> Reverse(IEnumerable<string> input) =>
         input.Reverse();
 
-    public void Dispose() => _disposable.Dispose();
+    public void Dispose()
+    {
+        Console.WriteLine($"disposing {Title}");
+        _disposable.Dispose();
+    }
 }
 
 internal record Data(string NewText, int ActualLength);
