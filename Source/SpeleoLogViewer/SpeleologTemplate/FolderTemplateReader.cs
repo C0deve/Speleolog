@@ -7,9 +7,18 @@ namespace SpeleoLogViewer.SpeleologTemplate;
 
 public class FolderTemplateReader
 {
-    public IReadOnlyList<TemplateInfos> Read(string path) =>
-        Directory
-            .EnumerateFiles(path, $"*{SpeleologTemplateReader.Extension}")
-            .Select(filePath => new TemplateInfos(filePath))
-            .ToImmutableArray();
+    public IReadOnlyList<TemplateInfos> Read(string path)
+    {
+        try
+        {
+            return Directory
+                .EnumerateFiles(path, $"*{SpeleologTemplateReader.Extension}")
+                .Select(filePath => new TemplateInfos(filePath))
+                .ToImmutableArray();
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return [];
+        }
+    }
 }
