@@ -370,7 +370,8 @@ public class LogFileViewerVMShould
         message
             .ShouldNotBeNull()
             .Logs
-            .ToStringArray().ShouldBe(["B masK", "mask A"]);
+            .ToStringArray()
+            .ShouldBe(["B masK", "mask A"]);
     }
 
     [Fact]

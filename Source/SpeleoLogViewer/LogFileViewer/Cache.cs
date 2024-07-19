@@ -4,31 +4,31 @@ using System.Linq;
 
 namespace SpeleoLogViewer.LogFileViewer;
 
-public class Cache
+public class Cache(IEnumerable<string> logs)
 {
-    private readonly Dictionary<int,string> _logs;
-    public Cache(IEnumerable<string> logs) =>
-        _logs = logs
-            .Select((line, index) => (Line: line, Index: index))
-            .ToDictionary(x => x.Index, x => x.Line);
+    private readonly List<string> _logs = logs.ToList();
 
-    public string[] Values => _logs.Values.ToArray();
+    public string[] Values => _logs.ToArray();
+    public int[] AllIndex => _logs.Select((_, index) => index).ToArray();
 
     public Cache Add(IEnumerable<string> newLines)
     {
-        foreach (var line in  newLines) _logs.Add(_logs.Count, line);
+        foreach (var newLine in newLines) _logs.Add(newLine);
         return this;
     }
 
     public IEnumerable<int> Contains(string filter)
     {
-        if (string.IsNullOrWhiteSpace(filter))
-            return _logs.Keys;
+        if (_logs.Count == 0) 
+            return []; 
         
+        if (string.IsNullOrWhiteSpace(filter))
+            return AllIndex;
+
         return _logs
-            .Where(pair => pair.Value.Contains(filter, StringComparison.InvariantCultureIgnoreCase))
-            .Select(pair => pair.Key);
+            .Select((line, index) => line.Contains(filter, StringComparison.InvariantCultureIgnoreCase) ? index : -1)
+            .Where(index => index > -1);
     }
 
-    public IEnumerable<string> FromIndex(IEnumerable<int> index) => _logs.GetAll(index);
+    public IEnumerable<string> FromIndex(IEnumerable<int> index) => index.Select(i => _logs[i]);
 }

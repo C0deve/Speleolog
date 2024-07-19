@@ -29,4 +29,10 @@ public class CacheShould
         new Cache(["a", "b", "c"])
             .FromIndex([0, 2])
             .ShouldBe(["a", "c"]);
+    
+    [Fact]
+    public void ReturnAllIndex() =>
+        new Cache(["a", "b"])
+            .AllIndex
+            .ShouldBe([0,1]);
 }

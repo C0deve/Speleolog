@@ -90,7 +90,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
             {
                 _cache = input.Cache;
                 _actualLength = input.TotalLength;
-                paginator = new Paginator<int>(input.Cache.Contains(""), lineCountByPage);
+                paginator = new Paginator<int>(input.Cache.AllIndex, lineCountByPage);
             })
             .ToUnit()
             .Publish();
