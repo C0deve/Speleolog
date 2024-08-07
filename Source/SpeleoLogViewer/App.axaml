@@ -1,5 +1,5 @@
 <Application
-    RequestedThemeVariant="Default"
+    RequestedThemeVariant="Light"
     x:Class="SpeleoLogViewer.App"
     xmlns="https://github.com/avaloniaui"
     xmlns:idc="using:Dock.Avalonia.Controls"
