@@ -17,6 +17,7 @@ using SpeleoLogViewer._BaseClass;
 using SpeleoLogViewer.ApplicationState;
 using SpeleoLogViewer.FileChanged;
 using SpeleoLogViewer.LogFileViewer;
+using SpeleoLogViewer.LogFileViewer.V2;
 using SpeleoLogViewer.SpeleologTemplate;
 
 namespace SpeleoLogViewer.Main;
@@ -61,7 +62,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         _factory.InitLayout(Layout);
         _factory.DockableClosed += (_, args) =>
         {
-            if (args.Dockable is not LogFileViewerVM logViewModel) return;
+            if (args.Dockable is not LogFileViewerV2VM logViewModel) return;
             
             State.LastOpenFiles.Remove(logViewModel.FilePath);
             logViewModel.Dispose();
@@ -148,11 +149,11 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         AddToDock(CreateLogViewModel(filePath));
     }
 
-    private LogFileViewerVM CreateLogViewModel(string path) =>
+    private LogFileViewerV2VM CreateLogViewModel(string path) =>
         new(
             filePath: path,
             fileChangedStream: _fileChangedObservableFactory.BuildFileChangedObservable(path, _schedulerProvider.TaskpoolScheduler),
-            _textFileLoader,
+            new TextFileLoaderV2(),
             100,
             "error",
             RxApp.TaskpoolScheduler);

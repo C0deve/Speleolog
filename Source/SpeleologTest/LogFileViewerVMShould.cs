@@ -60,12 +60,12 @@ public class LogFileViewerVMShould
     [Fact]
     public void EmitChangesOnFileChanged()
     {
-        string[] lines = ["A", "B", "C"];
+        string[] rows = ["A", "B", "C"];
         var emitter = new Subject<Unit>();
         var scheduler = new TestScheduler();
         AddToTop? message = null;
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new SequenceTextFileLoaderForTest([""], lines), 300, ErrorTag,
+            new SequenceTextFileLoaderForTest([""], rows), 300, ErrorTag,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.RefreshStream.Is<AddToTop>().Subscribe(s => message = s);
@@ -82,12 +82,12 @@ public class LogFileViewerVMShould
     [Fact]
     public void ChangesEmitOnlyDiff()
     {
-        string[] lines = ["A", "B", "C", "D"];
+        string[] rows = ["A", "B", "C", "D"];
         var emitter = new Subject<Unit>();
         var scheduler = new TestScheduler();
         AddToTop? message = null;
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new SequenceTextFileLoaderForTest(["A"], lines), 300, ErrorTag,
+            new SequenceTextFileLoaderForTest(["A"], rows), 300, ErrorTag,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.RefreshStream.Is<AddToTop>().Subscribe(s => message = s);
@@ -414,12 +414,12 @@ public class LogFileViewerVMShould
     [Fact]
     public void EmitChangesOnReloadFile()
     {
-        string[] lines = ["A", "B", "C"];
+        string[] rows = ["A", "B", "C"];
         var emitter = new Subject<Unit>();
         var scheduler = new TestScheduler();
         AddToTop? message = null;
         using var sut = new LogFileViewerVM("", emitter.AsObservable(),
-            new SequenceTextFileLoaderForTest([""], lines), 300, ErrorTag,
+            new SequenceTextFileLoaderForTest([""], rows), 300, ErrorTag,
             scheduler);
         scheduler.AdvanceBy(OperationDelay.Ticks); // file loading
         sut.RefreshStream.Is<AddToTop>().Subscribe(s => message = s);

@@ -51,11 +51,11 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
                     case DeleteAll:
                         LogFileContent?.Inlines?.Clear();
                         break;
-                    case AddToBottom lines:
-                        AddLinesToBottom(lines);
+                    case AddToBottom rows:
+                        AddLinesToBottom(rows);
                         break;
-                    case AddToTop lines:
-                        AddLinesToTop(lines);
+                    case AddToTop rows:
+                        AddLinesToTop(rows);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(message));
@@ -81,15 +81,15 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
         }
     }
 
-    private void AddLinesToBottom(AddToBottom lines)
+    private void AddLinesToBottom(AddToBottom rows)
     {
-        foreach (var s in lines.Logs.Select(MapLogToRun)) 
+        foreach (var s in rows.Logs.Select(MapLogToRun)) 
             LogFileContent?.Inlines?.Add(s);
     }
     
-    private void AddLinesToTop(AddToTop lines)
+    private void AddLinesToTop(AddToTop rows)
     {
-        foreach (var run in lines.Logs.Select(MapLogToRun))
+        foreach (var run in rows.Logs.Select(MapLogToRun))
         {
             run.Classes.Add("JustAdded");
             AddTimerToRemoveClass(run);
@@ -97,10 +97,10 @@ public partial class LogFileViewerView : ReactiveUserControl<LogFileViewerVM>
         }
     }
     
-    private static Run MapLogToRun(LogLinesAggregate line)
+    private static Run MapLogToRun(LogLinesAggregate row)
     {
-        var run = new Run(line.Text);
-        if (line is ErrorDefaultLogLinesAggregate)
+        var run = new Run(row.Text);
+        if (row is ErrorDefaultLogLinesAggregate)
             run.Classes.Add("Error");
         return run;
     }

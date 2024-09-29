@@ -53,5 +53,9 @@
         <DependentUpon>LogView.axaml</DependentUpon>
         <SubType>Code</SubType>
       </Compile>
+      <Compile Update="LogFileViewer\V2\LogFileViewerV2View.axaml.cs">
+        <DependentUpon>LogFileViewerView.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
     </ItemGroup>
 </Project>

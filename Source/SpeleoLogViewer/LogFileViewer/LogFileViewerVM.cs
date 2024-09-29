@@ -20,11 +20,9 @@ namespace SpeleoLogViewer.LogFileViewer;
 public sealed class LogFileViewerVM : Document, IDisposable
 {
     private readonly CompositeDisposable _disposable = new();
-    private Cache _cache = new([]);
+    private readonly Cache _cache = new();
     private readonly BehaviorSubject<IMessage> _refresh = new(IMessage.Initial);
     private readonly TimeSpan _throttleTime = TimeSpan.FromMilliseconds(500);
-    private int _actualLength;
-
     public TimeSpan AnimationDuration { get; } = TimeSpan.FromSeconds(10);
     public string FilePath { get; }
     public IObservable<IMessage> RefreshStream { get; }
@@ -34,8 +32,8 @@ public sealed class LogFileViewerVM : Document, IDisposable
 
     [Reactive] public long LoadingDuration { get; private set; }
     public ReactiveCommand<Unit, string> Load { get; }
+    private ReactiveCommand<string, Unit> Refresh { get; }
     public ReactiveCommand<Unit, AddToBottom> NextPage { get; }
-    private ReactiveCommand<Data, AddToTop> GetChanges { get; }
 
     public LogFileViewerVM(
         string filePath,
@@ -52,13 +50,10 @@ public sealed class LogFileViewerVM : Document, IDisposable
         MaskText = string.Empty;
         FilePath = filePath;
         Title = Path.GetFileName(FilePath);
-        var paginator = new Paginator<int>(Enumerable.Empty<int>(), lineCountByPage);
+        var paginator = new Paginator<int>([], lineCountByPage);
         var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
 
-        Load = ReactiveCommand.CreateFromTask(
-            () => LoadFileContentAsync(filePath, textFileLoader),
-            outputScheduler: taskpoolScheduler
-        );
+        Load = ReactiveCommand.CreateFromTask( () => LoadFileContentAsync(filePath, textFileLoader));
 
         NextPage = ReactiveCommand.CreateFromObservable(() =>
             Observable
@@ -66,79 +61,68 @@ public sealed class LogFileViewerVM : Document, IDisposable
                 .LogToAggregateStream(DoMaskText)
                 .Select(array => new AddToBottom(array))
         );
-
-        GetChanges = ReactiveCommand.CreateFromObservable<Data, AddToTop>(data => Observable
-            .Return(data)
-            .Select(Diff)
-            .Select(Split)
-            .Do(change => _cache.Add(change))
+        
+        Refresh = ReactiveCommand.Create<string>(input =>  _cache.Refresh(input));
+        
+        var getChanges = _cache
+            .Added
             .Select(text => DoFilter(Filter, text))
             .Select(text => DoMaskText(MaskText, text))
             .Select(Reverse) // Aggregate need to be done in reverse
-            .Select(lines => LogAggregator.Aggregate(lines, ErrorTag))
+            .Select(rows => LogAggregator.AggregateLog(rows, ErrorTag))
             .Select(aggregates => aggregates.Reverse()) // Cancel the reverse because aggregate are displayed from top to bottom
             .Select(aggregates => aggregates.ToImmutableArray())
             .Where(s => s.Length != 0)
-            .Select(array => new AddToTop(array))
-        );
-
-        var initialLoad = Load
+            .Select(array => new AddToTop(array));
+        
+        Load
             .Take(1)
-            .Select(s => (Split: Split(s), TotalLength: s.Length))
-            .Select(input => (Cache: new Cache(input.Split), input.TotalLength))
-            .Do(input =>
-            {
-                _cache = input.Cache;
-                _actualLength = input.TotalLength;
-                paginator = new Paginator<int>(input.Cache.AllIndex, lineCountByPage);
-            })
-            .ToUnit()
-            .Publish();
+            .Do(input => _cache.Init(input))
+            .Subscribe()
+            .DisposeWith(_disposable);
 
-        initialLoad.InvokeCommand(NextPage);
+        _cache
+            .Initialized
+            .Do(index => paginator = new Paginator<int>(index, lineCountByPage))
+            .ToUnit()
+            .InvokeCommand(NextPage)
+            .DisposeWith(_disposable);
 
         Load
-            .SkipUntil(initialLoad)
-            .Select(newText => new Data(newText, _actualLength))
-            .InvokeCommand(GetChanges);
+            .Skip(1)
+            .InvokeCommand(Refresh)
+            .DisposeWith(_disposable);
 
         fileChangedStream // changes fromm file system stream
-            .SkipUntil(initialLoad)
-            .InvokeCommand(Load);
+            .SkipUntil(_cache.Initialized)
+            .ObserveOn(taskpoolScheduler)
+            .InvokeCommand(Load)
+            .DisposeWith(_disposable);
 
         this.WhenAnyValue(vm => vm.Filter, vm => vm.MaskText, vm => vm.ErrorTag, (filter, _, _) => filter)
-            .SkipUntil(initialLoad)
+            .SkipUntil(_cache.Initialized)
             .Throttle(_throttleTime, taskpoolScheduler)
             .Do(filter => paginator = new Paginator<int>(_cache.Contains(filter), lineCountByPage))
             .Do(_ => _refresh.OnNext(IMessage.DeleteAll))
             .ToUnit()
             .InvokeCommand(NextPage);
 
-        GetChanges.Cast<IMessage>()
+        getChanges.Cast<IMessage>()
             .Merge(NextPage)
             .Subscribe(_refresh)
             .DisposeWith(_disposable);
 
-        initialLoad.Connect().DisposeWith(_disposable);
         Load.Execute().Subscribe();
     }
 
-
-    private static string[] Split(string actualText)
-    {
-        using (new Watcher("Split"))
-        {
-            return actualText.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-        }
-    }
 
     private static IEnumerable<string> DoMaskText(string mask, IEnumerable<string> actualText)
     {
         if (string.IsNullOrWhiteSpace(mask))
             return actualText;
 
-        return actualText.Select(line =>
-            line.Replace(mask, string.Empty, StringComparison.InvariantCultureIgnoreCase));
+        return actualText.Select(row =>
+            row.Replace(mask, string.Empty, StringComparison.InvariantCultureIgnoreCase));
     }
 
     private static IEnumerable<string> DoFilter(string filter, IEnumerable<string> actualText)
@@ -147,7 +131,7 @@ public sealed class LogFileViewerVM : Document, IDisposable
             return actualText;
 
         return actualText
-            .Where(line => line.Contains(filter, StringComparison.InvariantCultureIgnoreCase));
+            .Where(row => row.Contains(filter, StringComparison.InvariantCultureIgnoreCase));
     }
 
     private async Task<string> LoadFileContentAsync(string filePath, ITextFileLoader textFileLoader)
@@ -159,26 +143,13 @@ public sealed class LogFileViewerVM : Document, IDisposable
         LoadingDuration = watch.ElapsedMilliseconds;
         return textAsync;
     }
-
-
-    private static string Diff(Data input)
-    {
-        var actualTextLength = input.ActualLength;
-        var newTextLength = input.NewText.Length;
-
-        return actualTextLength <= newTextLength
-            ? input.NewText.Substring(actualTextLength, newTextLength - actualTextLength) // file size increases so logs have been added : keep only the changes 
-            : Environment.NewLine + input.NewText; // file size decreases so it is a creation. keep all text and add an artificial line break
-    }
-
+    
     private static IEnumerable<string> Reverse(IEnumerable<string> input) =>
         input.Reverse();
 
     public void Dispose()
     {
-        Console.WriteLine($"disposing {Title}");
+        Debug.WriteLine($"disposing {Title}");
         _disposable.Dispose();
     }
 }
-
-internal record Data(string NewText, int ActualLength);

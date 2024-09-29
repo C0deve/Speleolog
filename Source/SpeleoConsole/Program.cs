@@ -15,6 +15,7 @@ Console.WriteLine("Hello, World!");
 
 
 // Write the string array to a new file named "WriteLines.txt".
-using var outputFile = new StreamWriter(Path.Combine(@"D:\Veranda", "sample.txt"), true);
-for (var i = 0; i < 10000; i++)
-    outputFile.WriteLine("Bla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla bla");
+using var outputFile = new StreamWriter(Path.Combine(@"D:\Veranda", "sample4.txt"), true);
+Enumerable.Range(0,1543).Select(i => $"{i}").ToList().ForEach(outputFile.WriteLine);
+// for (var i = 0; i < 10000; i++)
+//     outputFile.WriteLine("Bla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla blaBla bla bla");

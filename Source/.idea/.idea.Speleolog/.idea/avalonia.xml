@@ -10,6 +10,8 @@
         <entry key="SpeleoLogViewer/LogFileViewer/DockableView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
         <entry key="SpeleoLogViewer/LogFileViewer/LogFileViewerView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
         <entry key="SpeleoLogViewer/LogFileViewer/LogView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
+        <entry key="SpeleoLogViewer/LogFileViewer/V2/LogFileViewerV2View.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
+        <entry key="SpeleoLogViewer/LogFileViewer/V2/LogFileViewerView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
         <entry key="SpeleoLogViewer/Main/MainWindow.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
         <entry key="SpeleoLogViewer/Views/Documents/FileView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
         <entry key="SpeleoLogViewer/Views/Documents/LogView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />

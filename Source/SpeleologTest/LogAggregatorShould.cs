@@ -9,9 +9,8 @@ public class LogAggregatorShould
     [Fact]
     public void AggregateLogByType()
     {
-        var sut = new LogAggregator();
-        IEnumerable<string> lines = ["A", "B", "Error1", "Error2", "E", "Error3"];
-        LogAggregator.Aggregate(lines, "error").ShouldBe(
+        IEnumerable<string> rows = ["A", "B", "Error1", "Error2", "E", "Error3"];
+        rows.AggregateLog("error").ShouldBe(
             new List<LogLinesAggregate>
                 {
                     new DefaultLogLinesAggregate("A" + Environment.NewLine + "B" + Environment.NewLine),
@@ -25,9 +24,8 @@ public class LogAggregatorShould
     [Fact]
     public void RecognizeErrorLogByTag()
     {
-        var sut = new LogAggregator();
-        IEnumerable<string> lines = ["A", "B", "test1", "test2", "E", "test3"];
-        LogAggregator.Aggregate(lines, "test")
+        IEnumerable<string> rows = ["A", "B", "test1", "test2", "E", "test3"];
+        rows.AggregateLog("test")
             .ShouldBe(new List<LogLinesAggregate>
                 {
                     new DefaultLogLinesAggregate("A" + Environment.NewLine + "B" + Environment.NewLine),
@@ -40,16 +38,14 @@ public class LogAggregatorShould
     [Fact]
     public void KeepOrder()
     {
-        var sut = new LogAggregator();
-        List<string> lines = ["A", "B", "test1", "test2", "E", "test3"];
-        LogAggregator.Aggregate(lines, "error").SelectMany(aggregate => aggregate.Text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
-            .ShouldBe(lines);
+        List<string> rows = ["A", "B", "test1", "test2", "E", "test3"];
+        rows.AggregateLog("error").SelectMany(aggregate => aggregate.Text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
+            .ShouldBe(rows);
     }
     [Fact]
     public void RecognizeErrorLogByTag1()
     {
-        var sut = new LogAggregator();
-        IEnumerable<string> lines = ["A", "error", "error", "A", "A", "error", "A", "error", "error", "A"];
+        IEnumerable<string> rows = ["A", "error", "error", "A", "A", "error", "A", "error", "error", "A"];
         var expected = new List<LogLinesAggregate>
             {
                 new DefaultLogLinesAggregate("A" + Environment.NewLine),
@@ -62,7 +58,7 @@ public class LogAggregatorShould
             }
             .ToImmutableArray();
         
-        LogAggregator.Aggregate(lines, "error")
+        rows.AggregateLog("error")
             .ShouldBe(expected);
     }
 }

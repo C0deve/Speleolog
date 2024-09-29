@@ -5,28 +5,28 @@ using System.Text;
 
 namespace SpeleoLogViewer.LogFileViewer;
 
-public class LogAggregator
+public static class LogAggregator
 {
-    public static IEnumerable<LogLinesAggregate> Aggregate(IEnumerable<string> lines, string errorTag) =>
-        lines.Aggregate(
+    public static IEnumerable<LogLinesAggregate> AggregateLog(this IEnumerable<string> rows, string errorTag) =>
+        rows.Aggregate(
                 new List<Builder>(),
-                (aggregateList, line) =>
+                (aggregateList, row) =>
                 {
                     var last = aggregateList.LastOrDefault();
-                    if (ErrorPredicate(line, errorTag))
+                    if (ErrorPredicate(row, errorTag))
                     {
                         if (last is ErrorBuilder)
-                            last.AddLine(line);
+                            last.AddLine(row);
                         else
-                            aggregateList.Add(new ErrorBuilder(line));
+                            aggregateList.Add(new ErrorBuilder(row));
 
                         return aggregateList;
                     }
 
                     if (last is null or ErrorBuilder)
-                        aggregateList.Add(new DefaultBuilder(line));
+                        aggregateList.Add(new DefaultBuilder(row));
                     else
-                        last.AddLine(line);
+                        last.AddLine(row);
 
                     return aggregateList;
                 })
@@ -38,8 +38,8 @@ public class LogAggregator
             });
             
     
-    private static bool ErrorPredicate(string line, string errorTag) => 
-        line.Contains(errorTag, StringComparison.InvariantCultureIgnoreCase);
+    private static bool ErrorPredicate(string row, string errorTag) => 
+        row.Contains(errorTag, StringComparison.InvariantCultureIgnoreCase);
     
     private abstract class Builder
     {

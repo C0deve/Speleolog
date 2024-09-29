@@ -13,7 +13,7 @@ public static class Extensions
         Func<string, IEnumerable<string>, IEnumerable<string>> maskText) =>
         input
             .Select(data => (Logs: maskText(data.Mask, data.Logs), data.ErrorTag))
-            .Select(data => LogAggregator.Aggregate(data.Logs, data.ErrorTag))
+            .Select(data => LogAggregator.AggregateLog(data.Logs, data.ErrorTag))
             .Where(aggregates => aggregates.Any())
             .Select(aggregates => aggregates.ToImmutableArray());
 }
