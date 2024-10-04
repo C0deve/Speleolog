@@ -26,6 +26,8 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
     [Reactive] public string MaskText { get; set; }
     [Reactive] public string ErrorTag { get; set; }
     [Reactive] public long LoadingDuration { get; private set; }
+    [Reactive] public int TotalLogsCount { get; private set; }
+    [Reactive] public int FilteredLogsCount { get; private set; }
     
     public ReactiveCommand<Unit, string[]> Load { get; }
     public ReactiveCommand<Unit, ICommand> PreviousPage { get; } = ReactiveCommand.Create<Unit, ICommand>(_ => new Previous());
@@ -63,6 +65,8 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
                 state.Handle(command);
                 var newEvents = state.Events;
                 state.ClearEvents();
+                TotalLogsCount = state.TotalLogsCount;
+                FilteredLogsCount = state.FilteredLogsCount;
                 return newEvents;
             })
             .Log(this)

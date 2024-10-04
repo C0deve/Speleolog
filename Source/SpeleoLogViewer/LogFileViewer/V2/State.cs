@@ -6,13 +6,14 @@ namespace SpeleoLogViewer.LogFileViewer.V2;
 
 public class State : ValueObject
 {
-    private static string _errorTag = "";
     private readonly List<IEvent> _events = [];
     private PageRange _actualPage = PageRange.Empty;
     private readonly CacheV2 _cache = new();
     private readonly EndToStartPaginatorV2 _paginator;
 
     public IEvent[] Events => _events.ToArray();
+    public int TotalLogsCount => _cache.TotalLogsCount;
+    public int FilteredLogsCount => _cache.FilteredLogsCount;
 
     private State(int pageRange) => _paginator = new EndToStartPaginatorV2(pageRange);
 

@@ -18,7 +18,7 @@ namespace SpeleoLogViewer.LogFileViewer.V2;
 
 public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM>, IEnableLogger
 {
-    private const double ScrollDelta = 200;
+    private const double ScrollDelta = 20;
     private IDisposable? _refreshAllSubscription;
 
     private SelectableTextBlock? LogFileContent => this.FindControl<SelectableTextBlock>("LogContent");

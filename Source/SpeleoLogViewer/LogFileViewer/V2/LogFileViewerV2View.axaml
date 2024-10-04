@@ -12,33 +12,31 @@
     <Grid RowDefinitions="*,Auto">
         <Grid.Resources>
             <SolidColorBrush x:Key="JustAppendHighlight">#CAFFE7</SolidColorBrush>
-            <SolidColorBrush x:Key="BackGround">White</SolidColorBrush>
             <SolidColorBrush x:Key="Error">OrangeRed</SolidColorBrush>
         </Grid.Resources>
         <Grid.Styles>
             <Style Selector="SelectableTextBlock">
                 <Setter Property="Foreground" Value="DarkCyan" />
+                <Setter Property="SelectionBrush" Value="DarkSalmon" />
+                <Setter Property="SelectionForegroundBrush" Value="Indigo" />
                 <Setter Property="FontFamily" Value="Verdana" />
-            </Style>
-            <Style Selector="Run">
-                <Setter Property="Background" Value="{StaticResource BackGround}" />
             </Style>
             <Style Selector="Run.Error">
                 <Setter Property="Foreground" Value="{StaticResource Error}" />
             </Style>
+
             <Style Selector="Run.JustAdded">
-                <Setter Property="Background" Value="{StaticResource JustAppendHighlight}" />
                 <Style.Animations>
                     <!--  Fade out  -->
                     <Animation Duration="{Binding AnimationDuration}">
                         <KeyFrame Cue="100%">
-                            <Setter Property="Background" Value="{StaticResource BackGround}" />
+                            <Setter Property="Background" Value="Transparent" />
                         </KeyFrame>
                         <KeyFrame Cue="50%">
-                            <Setter Property="Background" Value="{StaticResource JustAppendHighlight}" />
+                            <Setter Property="Background" Value="{DynamicResource JustAppendHighlight}" />
                         </KeyFrame>
                         <KeyFrame Cue="0%">
-                            <Setter Property="Background" Value="{StaticResource JustAppendHighlight}" />
+                            <Setter Property="Background" Value="{DynamicResource JustAppendHighlight}" />
                         </KeyFrame>
                     </Animation>
                 </Style.Animations>
@@ -59,16 +57,23 @@
             <TextBlock
                 Grid.Column="0"
                 Margin="2"
-                Text="{Binding FilePath}"
                 TextWrapping="Wrap"
-                VerticalAlignment="Center" />
+                VerticalAlignment="Center">
+                <Run Text="{Binding FilePath}" />
+                <Italic>
+                    <Run Text="{Binding FilteredLogsCount}" />
+                    <Run Text="/" />
+                    <Run Text="{Binding TotalLogsCount}" />
+                </Italic>
+            </TextBlock>
             <TextBlock
                 Grid.Column="1"
                 Margin="2"
                 TextWrapping="Wrap"
                 VerticalAlignment="Center">
                 <Run Text="{Binding LoadingDuration}" />
-                ms</TextBlock>
+                ms
+            </TextBlock>
             <Button
                 Command="{Binding Load}"
                 Content="Recharger"
