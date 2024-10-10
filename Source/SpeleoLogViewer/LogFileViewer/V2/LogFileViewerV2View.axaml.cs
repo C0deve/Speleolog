@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Markup.Xaml;
@@ -18,8 +19,9 @@ namespace SpeleoLogViewer.LogFileViewer.V2;
 
 public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM>, IEnableLogger
 {
-    private const double ScrollDelta = 20;
+    private const double ScrollDelta = 100;
     private IDisposable? _refreshAllSubscription;
+    private ScrollViewer? _scrollViewer; // => this.FindControl<ScrollViewer>("ScrollViewer");
 
     private SelectableTextBlock? LogFileContent => this.FindControl<SelectableTextBlock>("LogContent");
 
@@ -32,16 +34,18 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
     {
         this.WhenActivated(disposable =>
         {
-            var observable = this.FindControl<ScrollViewer>("ScrollViewer").Events()
+            _scrollViewer ??= this.FindControl<ScrollViewer>("ScrollViewer");
+            
+            var observable = _scrollViewer.Events()
                 .ScrollChanged
-                .Throttle(TimeSpan.FromMilliseconds(100))
                 .ObserveOn(RxApp.MainThreadScheduler)
-                .Where(_ => LogFileContent?.Inlines?.Count > 0)
+                //.Where(_ => LogFileContent?.Inlines?.Count > 0)
                 .Publish();
 
             observable
+                .Where(x => x.OffsetDelta.Y > 0)
+                //.Do(eventArgs => Console.WriteLine($"ScrollToBottom: {eventArgs.OffsetDelta.Y}"))
                 .Where(args => IsScrollToBottom((ScrollViewer)args.Source!))
-                .Do(eventArgs => Debug.WriteLine($"ScrollToBottom: {eventArgs}"))
                 .Select(_ => Unit.Default)
                 .Log(this)
                 .InvokeCommand(this, view => view.ViewModel!.PreviousPage)
@@ -49,10 +53,32 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
 
             observable
                 .Where(args => args.OffsetDelta.Y < 0)
+                //.Do(eventArgs => Console.WriteLine($"ScrollToTop: {eventArgs.OffsetDelta.Y}"))
                 .Where(args => IsScrollToTop((ScrollViewer)args.Source!))
                 .Select(_ => Unit.Default)
                 .Log(this)
                 .InvokeCommand(this, view => view.ViewModel!.NextPage)
+                .DisposeWith(disposable);
+
+            observable
+                .Where(x => ((ScrollViewer)x.Source!).Offset.Y != 0 && x.ExtentDelta.Y != 0 || x.OffsetDelta.Y != 0 )
+                .Skip(1)
+                .Select(args => (extendY: args.ExtentDelta.Y, offsetY: args.OffsetDelta.Y))
+                .Scan(
+                    (extendY: 0.0, offsetY: 0.0),
+                    (acc, value) => value.extendY == 0
+                        ? value
+                        : (value.extendY, acc.offsetY))
+                .Where(x => x.extendY != 0)
+                //.Do(args => Console.WriteLine($"ExtentDelta :{args.extendY}, OffsetDelta :{args.offsetY}"))
+                .Select(x =>
+                {
+                    var delta = x.extendY + x.offsetY;
+                    return x.offsetY > 0 ? delta : -1 * delta;
+                })
+                //.Do(args => Console.WriteLine($"Move offset :{args}"))
+                .Do(x => _scrollViewer?.SetCurrentValue(ScrollViewer.OffsetProperty, new Vector(_scrollViewer.Offset.X, _scrollViewer.Offset.Y + x)))
+                .Subscribe()
                 .DisposeWith(disposable);
 
             observable.Connect().DisposeWith(disposable);
@@ -153,7 +179,7 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
     }
 
     private IEnumerable<Run> Map(IEnumerable<LogLine> groups) =>
-        groups.AggregateLog().Select(x => MapToRun(x));
+        groups.AggregateLog().Select(MapToRun);
 
     private Run MapToRun(LogGroup group)
     {
@@ -190,11 +216,17 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
             .Do(_ => inline.Classes.Remove("JustAdded"))
             .Subscribe();
 
-    private static bool IsScrollToBottom(ScrollViewer scrollViewer) =>
-        scrollViewer.Offset.Y + ScrollDelta >= scrollViewer.ScrollBarMaximum.Y;
+    private static bool IsScrollToBottom(ScrollViewer scrollViewer)
+    {
+        // Console.WriteLine($"{scrollViewer.Offset.Y + scrollViewer.Viewport.Height + ScrollDelta} >= {scrollViewer.Extent.Height}");
+        return scrollViewer.Offset.Y + scrollViewer.Viewport.Height + ScrollDelta >= scrollViewer.Extent.Height;
+    }
 
-    private static bool IsScrollToTop(ScrollViewer scrollViewer) =>
-        scrollViewer.Offset.Y - ScrollDelta <= 0;
+    private static bool IsScrollToTop(ScrollViewer scrollViewer)
+    {
+        // Console.WriteLine($"{scrollViewer.Offset.Y} <= {ScrollDelta}");
+        return scrollViewer.Offset.Y <= ScrollDelta;
+    }
 
 
     private static void Log(IEvent message)
@@ -202,19 +234,19 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
         switch (message)
         {
             case AddedToTheBottom addToBottom:
-                Debug.WriteLine($"addToBottom {addToBottom.Rows.Count}");
+                Console.WriteLine($"addToBottom {addToBottom.Rows.Count}");
                 break;
             case DeletedFromBottom deletedFromBottom:
-                Debug.WriteLine($"deletedFromBottom {deletedFromBottom.Count}");
+                Console.WriteLine($"deletedFromBottom {deletedFromBottom.Count}");
                 break;
             case DeletedFromTop deletedFromTop:
-                Debug.WriteLine($"deletedFromTop {deletedFromTop.Count}");
+                Console.WriteLine($"deletedFromTop {deletedFromTop.Count}");
                 break;
             case AddedToTheTop addToTop:
-                Debug.WriteLine($"addToTop {addToTop.Rows.Count}");
+                Console.WriteLine($"addToTop {addToTop.Rows.Count}");
                 break;
             case DeletedAll:
-                Debug.WriteLine("delete all");
+                Console.WriteLine("delete all");
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(message));
