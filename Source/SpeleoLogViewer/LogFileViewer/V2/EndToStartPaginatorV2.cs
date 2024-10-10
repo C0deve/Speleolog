@@ -5,7 +5,7 @@ namespace SpeleoLogViewer.LogFileViewer.V2;
 public class EndToStartPaginatorV2(int pageSize)
 {
     private int _itemCount;
-    private int LastIndex => _itemCount - 1;
+    private int LastIndex => Math.Max(0, _itemCount - 1);
     public bool IsOnLastPage => ActualPage.End == LastIndex;
     public bool CanGoNext => !IsOnLastPage;
     public bool CanGoPrevious => ActualPage.Start > 0;

@@ -96,4 +96,12 @@ public class EntToStartPaginatorV2Should
             .Move(-50)
             .ActualPage
             .ShouldBe(new PageRange(0, 100));
+
+    [Fact]
+    public void PushOnEmpty() =>
+        new EndToStartPaginatorV2(100)
+            .Reset(0)
+            .Push(50)
+            .ActualPage
+            .ShouldBe(new PageRange(0, 50));
 }
