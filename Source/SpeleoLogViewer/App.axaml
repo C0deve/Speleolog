@@ -14,6 +14,7 @@
 
     <Application.Resources>
         <acr:ControlRecycling x:Key="ControlRecyclingKey" TryToUseIdAsKey="True" />
+        <!-- <FontFamily x:Key="NunitoFont">avares://GoogleFonts/Assets/Fonts#Nunito</FontFamily> -->
     </Application.Resources>
 
     <Application.Styles>

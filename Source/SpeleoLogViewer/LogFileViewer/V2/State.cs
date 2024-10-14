@@ -133,20 +133,14 @@ public class State : ValueObject
     {
         var logRows = _cache[isGoneForward.AddedFomTop].ToArray();
         if (logRows.Length != 0)
-            yield return new AddedToTheTop(logRows);
-
-        if (isGoneForward.DeleteFromBottom.Length > 0)
-            yield return new DeletedFromBottom(isGoneForward.DeleteFromBottom.Length);
+            yield return new AddedToTheTop(isGoneForward.DeleteFromBottom.Length, isGoneForward.PageSize, _paginator.IsOnLastPage, logRows);
     }
 
     private IEnumerable<IEvent> Map(IsGoneBackward isGoneBackward)
     {
         var logRows = _cache[isGoneBackward.AddedFomBottom].ToArray();
         if (logRows.Length != 0)
-            yield return new AddedToTheBottom(logRows);
-
-        if (isGoneBackward.DeleteFromTop.Length > 0)
-            yield return new DeletedFromTop(isGoneBackward.DeleteFromTop.Length);
+            yield return new AddedToTheBottom(isGoneBackward.DeleteFromTop.Length, isGoneBackward.PageSize, logRows);
     }
 
     protected override IEnumerable<object> GetEqualityComponents()

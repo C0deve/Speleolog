@@ -26,13 +26,35 @@ public class EventBase(params LogLine[] rows) : ValueObject, IEvent
     }
 }
 
-public class AddedToTheTop(params LogLine[] rows) : EventBase(rows);
+public class AddedToTheTop(int removedFromBottomCount = 0, int previousPageSize = 0, bool isOnTop = false, params LogLine[] rows) : EventBase(rows)
+{
+    public int RemovedFromBottomCount { get; } = removedFromBottomCount;
+    public int PreviousPageSize { get; } = previousPageSize;
+    public bool IsOnTop { get; } = isOnTop;
 
-public class AddedToTheBottom(params LogLine[] rows) : EventBase(rows);
+    protected override IEnumerable<object> GetEqualityComponents()
+    {
+        yield return RemovedFromBottomCount;
+        yield return PreviousPageSize;
+        yield return IsOnTop;
+        foreach (var equalityComponent in base.GetEqualityComponents())
+            yield return equalityComponent;
+    }
+}
 
-public record DeletedFromTop(int Count) : IEvent;
-
-public record DeletedFromBottom(int Count) : IEvent;
+public class AddedToTheBottom(int removedFromTopCount = 0, int previousPageSize = 0, params LogLine[] rows) : EventBase(rows)
+{
+    public int RemovedFromTopCount { get; } = removedFromTopCount;
+    public int PreviousPageSize { get; } = previousPageSize;
+    
+    protected override IEnumerable<object> GetEqualityComponents()
+    {
+        yield return RemovedFromTopCount;
+        yield return PreviousPageSize;
+        foreach (var equalityComponent in base.GetEqualityComponents())
+            yield return equalityComponent;
+    }
+}
 
 public record DeletedAll : IEvent;
 

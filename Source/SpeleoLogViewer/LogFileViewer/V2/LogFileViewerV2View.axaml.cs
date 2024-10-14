@@ -21,25 +21,22 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
 {
     private const double ScrollDelta = 100;
     private IDisposable? _refreshAllSubscription;
-    private ScrollViewer? _scrollViewer; // => this.FindControl<ScrollViewer>("ScrollViewer");
+    private ScrollViewer? _scrollViewer;
+    private SelectableTextBlock? _logFileContent;
 
-    private SelectableTextBlock? LogFileContent => this.FindControl<SelectableTextBlock>("LogContent");
-
-    public LogFileViewerV2View()
-    {
-        InitializeComponent();
-    }
+    public LogFileViewerV2View() => InitializeComponent();
 
     private void InitializeComponent()
     {
         this.WhenActivated(disposable =>
         {
-            _scrollViewer ??= this.FindControl<ScrollViewer>("ScrollViewer");
-            
+            _logFileContent ??= this.FindControl<SelectableTextBlock>("LogContent") ?? throw new InvalidOperationException("LogFileViewerV2View is not yet loaded.");
+            _scrollViewer ??= this.FindControl<ScrollViewer>("ScrollViewer") ?? throw new InvalidOperationException("LogFileViewerV2View is not yet loaded.");
+
             var observable = _scrollViewer.Events()
                 .ScrollChanged
+                //.Do(args => Console.WriteLine($"ExtentDelta :{args.ExtentDelta.Y}, OffsetDelta :{args.OffsetDelta.Y}, ViewportDelta :{args.ViewportDelta.Y}"))
                 .ObserveOn(RxApp.MainThreadScheduler)
-                //.Where(_ => LogFileContent?.Inlines?.Count > 0)
                 .Publish();
 
             observable
@@ -60,30 +57,10 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
                 .InvokeCommand(this, view => view.ViewModel!.NextPage)
                 .DisposeWith(disposable);
 
-            observable
-                .Where(x => ((ScrollViewer)x.Source!).Offset.Y != 0 && x.ExtentDelta.Y != 0 || x.OffsetDelta.Y != 0 )
-                .Skip(1)
-                .Select(args => (extendY: args.ExtentDelta.Y, offsetY: args.OffsetDelta.Y))
-                .Scan(
-                    (extendY: 0.0, offsetY: 0.0),
-                    (acc, value) => value.extendY == 0
-                        ? value
-                        : (value.extendY, acc.offsetY))
-                .Where(x => x.extendY != 0)
-                //.Do(args => Console.WriteLine($"ExtentDelta :{args.extendY}, OffsetDelta :{args.offsetY}"))
-                .Select(x =>
-                {
-                    var delta = x.extendY + x.offsetY;
-                    return x.offsetY > 0 ? delta : -1 * delta;
-                })
-                //.Do(args => Console.WriteLine($"Move offset :{args}"))
-                .Do(x => _scrollViewer?.SetCurrentValue(ScrollViewer.OffsetProperty, new Vector(_scrollViewer.Offset.X, _scrollViewer.Offset.Y + x)))
-                .Subscribe()
-                .DisposeWith(disposable);
-
             observable.Connect().DisposeWith(disposable);
             _refreshAllSubscription ??= SubscribeToRefresh();
         });
+
         AvaloniaXamlLoader.Load(this);
     }
 
@@ -96,86 +73,88 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
     private void Handle(IEvent message)
     {
         Log(message);
+        if (_logFileContent is null) return;
+
         switch (message)
         {
             case DeletedAll:
-                LogFileContent?.Inlines?.Clear();
+                _logFileContent?.Inlines?.Clear();
                 break;
             case AddedToTheBottom toTheBottom:
                 foreach (var run in Map(toTheBottom.Rows))
-                    LogFileContent?.Inlines?.Add(run);
-                break;
-            case DeletedFromBottom deletedFromBottom:
-                DoDeletedFromBottom(deletedFromBottom.Count);
-                break;
-            case DeletedFromTop deletedFromTop:
-                DoDeletedFromTop(deletedFromTop.Count);
+                    _logFileContent.Inlines?.Add(run);
+                DeleteLines(_logFileContent, toTheBottom.RemovedFromTopCount, toTheBottom.PreviousPageSize, _scrollViewer);
                 break;
             case AddedToTheTop toTheTop:
                 foreach (var run in Map(toTheTop.Rows))
                     PushToTop(run);
+                DeleteLines(_logFileContent, toTheTop.RemovedFromBottomCount, toTheTop.PreviousPageSize, toTheTop.IsOnTop ? null : _scrollViewer, true);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(message));
         }
     }
 
-    private void DoDeletedFromBottom(int count)
+    private static void DeleteLines(SelectableTextBlock selectableTextBlock, int lineToDeleteCount, int previousPageSize, ScrollViewer? scrollViewer, bool isFromBottom = false)
     {
-        while (count > 0)
+        if (lineToDeleteCount == 0) return;
+        if (selectableTextBlock.Inlines is null || selectableTextBlock.Inlines.Count == 0) return;
+
+        var runs = selectableTextBlock.Inlines
+            .Where(inline => inline is Run)
+            .Cast<Run>();
+
+        if (isFromBottom)
+            runs = runs.Reverse();
+
+        var toDelete = DeleteLines(runs.ToArray(), lineToDeleteCount, isFromBottom ? RemoveFromBottom : RemoveFromTop);
+
+        foreach (var run in toDelete)
+            selectableTextBlock.Inlines.Remove(run);
+
+        if (!isFromBottom)
+            lineToDeleteCount *= -1;
+
+        AdjustScroll(lineToDeleteCount, previousPageSize, scrollViewer);
+        return;
+
+        LineResult RemoveFromBottom(string s, int i) => s.RemoveNthLineFromBottom(i);
+        LineResult RemoveFromTop(string s, int i) => s.RemoveNthLineFromTop(i);
+    }
+
+    private static IEnumerable<Run> DeleteLines(Run[] runs, int lineToDeleteCount, Func<string, int, LineResult> remove)
+    {
+        while (lineToDeleteCount > 0)
         {
-            if (LogFileContent?.Inlines is null || LogFileContent.Inlines.Count == 0) break;
-            if (LogFileContent.Inlines.Last() is not Run last) continue;
-            if (last.Text is null)
+            var run = runs.First();
+            if (run.Text is null)
             {
-                LogFileContent.Inlines.Remove(last);
+                yield return run;
                 continue;
             }
 
-            var result = last.Text.RemoveNthLineFromBottom(count);
-            count -= result.LineCount;
+            var result = remove(run.Text, lineToDeleteCount);
+            lineToDeleteCount -= result.LineCount;
 
             Debug.WriteLine($"Delete from bottom: found {result.LineCount} rows in last run");
             if (result.Text.Length == 0)
             {
-                LogFileContent.Inlines.Remove(last);
-                Debug.WriteLine($"Remove last run, inlines count {LogFileContent.Inlines.Count}");
+                yield return run;
                 continue;
             }
 
-            Debug.WriteLine($"delete {result.LineCount} rows from bottom, Length {last.Text.Length} => {result.Text.Length}");
-            last.Text = result.Text;
+            Debug.WriteLine($"delete {result.LineCount} rows from bottom, Length {run.Text.Length} => {result.Text.Length}");
+            run.Text = result.Text;
             break;
         }
     }
 
-    private void DoDeletedFromTop(int count)
+    private static void AdjustScroll(int count, int previousPageSize, ScrollViewer? scrollViewer)
     {
-        while (count > 0)
-        {
-            if (LogFileContent?.Inlines is null || LogFileContent.Inlines.Count == 0) break;
-            if (LogFileContent.Inlines.FirstOrDefault() is not Run first) continue;
-            if (first.Text is null)
-            {
-                LogFileContent.Inlines.Remove(first);
-                continue;
-            }
-
-            var result = first.Text.RemoveNthLineFromTop(count);
-            count -= result.LineCount;
-            Debug.WriteLine($"Remove from top found {result.LineCount} rows in first run");
-
-            if (result.Text.Length == 0)
-            {
-                LogFileContent.Inlines.Remove(first);
-                Debug.WriteLine($"Remove first run, inlines count {LogFileContent.Inlines.Count}");
-                continue;
-            }
-
-            Debug.WriteLine($"delete {result.LineCount} rows from top, Length {first.Text.Length} => {result.Text.Length}");
-            first.Text = result.Text;
-            break;
-        }
+        if (scrollViewer is null) return;
+        var offsetDelta = scrollViewer.Extent.Height * (1.0 * count / previousPageSize); // proportion of removed
+        // Console.WriteLine($"{scrollViewer.Offset.Y} => {scrollViewer.Offset.Y - offsetDelta}");
+        scrollViewer.SetCurrentValue(ScrollViewer.OffsetProperty, scrollViewer.Offset + new Vector(0, offsetDelta));
     }
 
     private IEnumerable<Run> Map(IEnumerable<LogLine> groups) =>
@@ -204,7 +183,7 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
 
     private void PushToTop(Run inline)
     {
-        LogFileContent?
+        _logFileContent?
             .Inlines?
             .Insert(0, inline);
     }
@@ -235,12 +214,6 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
         {
             case AddedToTheBottom addToBottom:
                 Console.WriteLine($"addToBottom {addToBottom.Rows.Count}");
-                break;
-            case DeletedFromBottom deletedFromBottom:
-                Console.WriteLine($"deletedFromBottom {deletedFromBottom.Count}");
-                break;
-            case DeletedFromTop deletedFromTop:
-                Console.WriteLine($"deletedFromTop {deletedFromTop.Count}");
                 break;
             case AddedToTheTop addToTop:
                 Console.WriteLine($"addToTop {addToTop.Rows.Count}");

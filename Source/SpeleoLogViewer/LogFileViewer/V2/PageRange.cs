@@ -41,7 +41,7 @@ public record PageRange : IEnumerable<int>
             throw new ArgumentException($"Cannot compare range with a smaller size ({incomingRange.Size}). Actual size: {Size}");
 
         if (IsEmpty)
-            return new IsGoneForward([], incomingRange[..]);
+            return new IsGoneForward([], incomingRange[..], Size);
 
         if (incomingRange.Start == Start && incomingRange.End == End)
             return new IsUnchanged();
@@ -55,23 +55,23 @@ public record PageRange : IEnumerable<int>
     private IsGoneForward MoveForward(PageRange incomingRange)
     {
         if (incomingRange.Start > End)
-            return new IsGoneForward(this[..], incomingRange[..]);
+            return new IsGoneForward(this[..], incomingRange[..], Size);
 
         var localIndexOfIncomingStart = _index.IndexOf(incomingRange.Start);
         var incomingIndexOfLocalEnd = incomingRange.IndexOf(End);
 
-        return new IsGoneForward(this[..localIndexOfIncomingStart], incomingRange[(incomingIndexOfLocalEnd + 1)..]);
+        return new IsGoneForward(this[..localIndexOfIncomingStart], incomingRange[(incomingIndexOfLocalEnd + 1)..], Size);
     }
 
     private IsGoneBackward MoveBackward(PageRange incomingRange)
     {
         if (incomingRange.End < Start)
-            return new IsGoneBackward(this[..], incomingRange[..]);
+            return new IsGoneBackward(this[..], incomingRange[..], Size);
 
         var localIndexOfIncomingEnd = _index.IndexOf(incomingRange.End);
         var incomingIndexOfLocalStart = incomingRange.IndexOf(Start);
 
-        return new IsGoneBackward(this[(localIndexOfIncomingEnd + 1)..], incomingRange[..incomingIndexOfLocalStart]);
+        return new IsGoneBackward(this[(localIndexOfIncomingEnd + 1)..], incomingRange[..incomingIndexOfLocalStart], Size);
     }
 
     public PageRange Move(int delta) => new(start: Start + delta, size: Size);
@@ -79,8 +79,8 @@ public record PageRange : IEnumerable<int>
 
 public interface IRangeCompare;
 
-public record IsGoneBackward(int[] DeleteFromTop, int[] AddedFomBottom) : IRangeCompare;
+public record IsGoneBackward(int[] DeleteFromTop, int[] AddedFomBottom, int PageSize) : IRangeCompare;
 
-public record IsGoneForward(int[] DeleteFromBottom, int[] AddedFomTop) : IRangeCompare;
+public record IsGoneForward(int[] DeleteFromBottom, int[] AddedFomTop, int PageSize) : IRangeCompare;
 
 public class IsUnchanged : IRangeCompare;
