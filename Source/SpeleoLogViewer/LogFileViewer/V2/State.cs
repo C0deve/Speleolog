@@ -14,6 +14,7 @@ public class State : ValueObject
     public IEvent[] Events => _events.ToArray();
     public int TotalLogsCount => _cache.TotalLogsCount;
     public int FilteredLogsCount => _cache.FilteredLogsCount;
+    public bool IsSearchOn => _cache.IsSearchOn;
 
     private State(int pageRange) => _paginator = new EndToStartPaginatorV2(pageRange);
 

@@ -8,9 +8,9 @@ public class CacheV2
 {
     private readonly List<string> _logs = [];
     private readonly List<int> _filteredIndex = [];
-    private bool IsSearchOn => !string.IsNullOrWhiteSpace(SearchTerm);
     private int _refreshCount;
 
+    public bool IsSearchOn => !string.IsNullOrWhiteSpace(SearchTerm);
     public int FilteredLogsCount => _filteredIndex.Count;
     public bool IsInitialized => _refreshCount > 1;
     public List<int> LastAddedIndex { get; } = [];
