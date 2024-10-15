@@ -32,22 +32,33 @@ internal static class ShouldyExtension
                 var actual = events[i];
                 var theExpected = array[i];
                 actual.GetType().ShouldBe(theExpected.GetType());
-
+               
                 switch (actual)
                 {
-                    case EventBase @event:
-                        var actualLogList = @event.Rows.ToArray();
-                        var expectedLogList = ((EventBase)theExpected).Rows.ToArray();
-                        
-                        for (var i1 = 0; i1 < @event.Rows.Count; i1++) 
-                            actualLogList[i1].ShouldBe(expectedLogList[i1], $"i1 = {i1}");
-                        
+                    case AddedToTheTop addedToTheTop:
+                        var theExpected1 = (AddedToTheTop)theExpected;
+                        addedToTheTop.IsOnTop.ShouldBe(theExpected1.IsOnTop);
+                        addedToTheTop.RemovedFromBottomCount.ShouldBe(theExpected1.RemovedFromBottomCount);
+                        addedToTheTop.PreviousPageSize.ShouldBe(theExpected1.PreviousPageSize);
+                        ShouldBe(addedToTheTop.Rows.ToArray(), theExpected1.Rows.ToArray());
                         break;
+                    case AddedToTheBottom addedToTheBottom:
+                        var theExpected2 = (AddedToTheBottom)theExpected;
+                        addedToTheBottom.PreviousPageSize.ShouldBe(theExpected2.PreviousPageSize);
+                        ShouldBe(addedToTheBottom.Rows.ToArray(), theExpected2.Rows.ToArray());
+                        break;
+                    
                     default:
                         actual.ShouldBe(theExpected);
                         break;
                 }
             }
         });
+    }
+
+    private static void ShouldBe(LogLine[] actualLogList, LogLine[] expectedLogList)
+    {
+        for (var i1 = 0; i1 < actualLogList.Length; i1++) 
+            actualLogList[i1].ShouldBe(expectedLogList[i1], $"i1 = {i1}");
     }
 }
