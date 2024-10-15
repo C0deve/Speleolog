@@ -1,11 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using SpeleoLogViewer.LogFileViewer.V2;
 
-namespace SpeleoLogViewer.LogFileViewer;
+namespace SpeleoLogViewer.LogFileViewer.V2;
 
 public class TextFileLoaderV2 : ITextFileLoaderV2
 {
