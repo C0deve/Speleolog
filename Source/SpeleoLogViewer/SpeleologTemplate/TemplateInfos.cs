@@ -1,6 +1,23 @@
-﻿namespace SpeleoLogViewer.SpeleologTemplate;
+﻿using System.Reactive;
+using ReactiveUI;
 
-public record TemplateInfos(string Path)
+namespace SpeleoLogViewer.SpeleologTemplate;
+
+public record TemplateInfos
 {
-    public string Name { get; } = System.IO.Path.GetFileNameWithoutExtension(Path);
+    public TemplateInfos(string path)
+    {
+        Path = path;
+        Name = System.IO.Path.GetFileNameWithoutExtension(path);
+        Open = ReactiveCommand.Create(() => this);
+    }
+
+    public string Name { get; }
+    public ReactiveCommand<Unit, TemplateInfos> Open { get; }
+    public string Path { get; }
+
+    public void Deconstruct(out string path)
+    {
+        path = Path;
+    }
 }

@@ -12,7 +12,6 @@ using Avalonia.Platform.Storage;
 using Dock.Model.Controls;
 using Dock.Model.Core;
 using ReactiveUI;
-using ReactiveUI.Fody.Helpers;
 using SpeleoLogViewer._BaseClass;
 using SpeleoLogViewer.ApplicationState;
 using SpeleoLogViewer.FileChanged;
@@ -27,7 +26,6 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
     private readonly CompositeDisposable _disposables = [];
 
     private readonly IStorageProvider _storageProvider;
-    private readonly ITextFileLoader _textFileLoader;
     private readonly ISchedulerProvider _schedulerProvider;
     private readonly ISpeleologTemplateReader _templateReader;
     private readonly DockFactory _factory;
@@ -37,7 +35,6 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
     public ObservableCollection<string> ErrorMessages { get; } = [];
     public ReactiveCommand<Unit, Unit> OpenFileCommand { get; }
     private ReactiveCommand<string, IReadOnlyList<TemplateInfos>> ReadTemplateFolder { get; }
-    [Reactive] public TemplateInfos? CurrentTemplate { get; set; }
 
     private readonly ObservableAsPropertyHelper<IReadOnlyList<TemplateInfos>> _templateInfosList;
     public IReadOnlyList<TemplateInfos> TemplateInfosList => _templateInfosList.Value;
@@ -53,7 +50,6 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         FolderTemplateReader folderTemplateReader)
     {
         _storageProvider = storageProvider;
-        _textFileLoader = textFileLoader;
         _schedulerProvider = schedulerProvider;
         _templateReader = templateReader;
         _factory = new DockFactory();
@@ -71,21 +67,17 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         _fileChangedObservableFactory = new FileChangedObservableFactory(fileSystemObserverFactory);
 
         OpenFileCommand = ReactiveCommand.CreateFromTask(OpenFile);
-
         ReadTemplateFolder = ReactiveCommand.Create<string, IReadOnlyList<TemplateInfos>>(folderTemplateReader.Read);
         _templateInfosList = ReadTemplateFolder
             .ToProperty(this, nameof(TemplateInfosList))
             .DisposeWith(_disposables);
 
-        this.WhenAnyValue(vm => vm.CurrentTemplate, infos => infos is null
-                ? null
-                : new List<string> { infos.Path })
+        this.WhenAnyValue(vm => vm.TemplateInfosList)
             .IsNotNull()
-            .Merge(Observable.Return(state.LastOpenFiles))
-            .SelectAsync(OpenFilesFromPathAsync)
-            .Do(_ => CurrentTemplate = null)
-            .Subscribe()
-            .DisposeWith(_disposables);
+            .SelectMany(x=> x.Select(infos => infos.Open))
+            .Merge()
+            .SelectAsync((templateInfos, token) => OpenFilesFromPathAsync([templateInfos.Path], token))
+            .Subscribe();
 
         Observable
             .Return(State.TemplateFolder)
@@ -100,7 +92,8 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         e.Handled = true;
         if (result is null) return;
 
-        _ = OpenFilesFromPathAsync(result.Where(item => item is IStorageFile).Cast<IStorageFile>().Select(file => file.Path.LocalPath), default);
+        _ = OpenFilesFromPathAsync(result
+            .Where(item => item is IStorageFile).Cast<IStorageFile>().Select(file => file.Path.LocalPath), default);
     }
 
     private async Task OpenFile(CancellationToken token)
@@ -111,7 +104,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
 
     public void Dispose() => _disposables.Dispose();
 
-    private async Task OpenFilesFromPathAsync(IEnumerable<string> filesPath, CancellationToken token)
+    private async Task OpenFilesFromPathAsync(IEnumerable<string> filesPath, CancellationToken token = default)
     {
         ErrorMessages.Clear();
         try
