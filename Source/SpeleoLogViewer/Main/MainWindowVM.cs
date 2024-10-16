@@ -63,7 +63,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         _factory.DockableClosed += (_, args) =>
         {
             if (args.Dockable is not LogFileViewerV2VM logViewModel) return;
-            
+
             State.LastOpenFiles.Remove(logViewModel.FilePath);
             logViewModel.Dispose();
         };
@@ -77,15 +77,16 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
             .ToProperty(this, nameof(TemplateInfosList))
             .DisposeWith(_disposables);
 
-        this.WhenAnyValue(vm => vm.CurrentTemplate, infos => infos is null 
-                ? null 
+        this.WhenAnyValue(vm => vm.CurrentTemplate, infos => infos is null
+                ? null
                 : new List<string> { infos.Path })
             .IsNotNull()
             .Merge(Observable.Return(state.LastOpenFiles))
             .SelectAsync(OpenFilesFromPathAsync)
+            .Do(_ => CurrentTemplate = null)
             .Subscribe()
             .DisposeWith(_disposables);
-        
+
         Observable
             .Return(State.TemplateFolder)
             .InvokeCommand(ReadTemplateFolder)
