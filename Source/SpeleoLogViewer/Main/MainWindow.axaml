@@ -32,6 +32,8 @@
                             </DataTemplate>
                         </MenuItem.ItemTemplate>
                     </MenuItem>
+                    <Separator />
+                    <MenuItem Header="_Template Folder" Command="{Binding OpenTemplateFolderCommand}" />
                 </MenuItem>
             </Menu>
         </StackPanel>

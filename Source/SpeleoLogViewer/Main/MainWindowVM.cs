@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
@@ -15,7 +16,6 @@ using ReactiveUI;
 using SpeleoLogViewer._BaseClass;
 using SpeleoLogViewer.ApplicationState;
 using SpeleoLogViewer.FileChanged;
-using SpeleoLogViewer.LogFileViewer;
 using SpeleoLogViewer.LogFileViewer.V2;
 using SpeleoLogViewer.SpeleologTemplate;
 
@@ -34,6 +34,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
     public IRootDock Layout { get; }
     public ObservableCollection<string> ErrorMessages { get; } = [];
     public ReactiveCommand<Unit, Unit> OpenFileCommand { get; }
+    public ReactiveCommand<Unit, bool> OpenTemplateFolderCommand { get; }
     private ReactiveCommand<string, IReadOnlyList<TemplateInfos>> ReadTemplateFolder { get; }
 
     private readonly ObservableAsPropertyHelper<IReadOnlyList<TemplateInfos>> _templateInfosList;
@@ -42,7 +43,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
     public SpeleologState State { get; }
 
     public MainWindowVM(IStorageProvider storageProvider,
-        ITextFileLoader textFileLoader,
+        ILauncher launcher,
         Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory,
         SpeleologState state,
         ISchedulerProvider schedulerProvider,
@@ -67,6 +68,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         _fileChangedObservableFactory = new FileChangedObservableFactory(fileSystemObserverFactory);
 
         OpenFileCommand = ReactiveCommand.CreateFromTask(OpenFile);
+        OpenTemplateFolderCommand = ReactiveCommand.CreateFromTask(() => launcher.LaunchDirectoryInfoAsync(Directory.CreateDirectory(State.TemplateFolder)));
         ReadTemplateFolder = ReactiveCommand.Create<string, IReadOnlyList<TemplateInfos>>(folderTemplateReader.Read);
         _templateInfosList = ReadTemplateFolder
             .ToProperty(this, nameof(TemplateInfosList))
@@ -74,7 +76,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
 
         this.WhenAnyValue(vm => vm.TemplateInfosList)
             .IsNotNull()
-            .SelectMany(x=> x.Select(infos => infos.Open))
+            .SelectMany(x => x.Select(infos => infos.Open))
             .Merge()
             .SelectAsync((templateInfos, token) => OpenFilesFromPathAsync([templateInfos.Path], token))
             .Subscribe()
@@ -84,7 +86,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
             .Return(State.TemplateFolder)
             .InvokeCommand(ReadTemplateFolder)
             .DisposeWith(_disposables);
-        
+
         Observable.Return(state.LastOpenFiles)
             .SelectAsync(OpenFilesFromPathAsync)
             .Subscribe()
@@ -99,7 +101,9 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         if (result is null) return;
 
         _ = OpenFilesFromPathAsync(result
-            .Where(item => item is IStorageFile).Cast<IStorageFile>().Select(file => file.Path.LocalPath), default);
+            .Where(item => item is IStorageFile)
+            .Cast<IStorageFile>()
+            .Select(file => file.Path.LocalPath));
     }
 
     private async Task OpenFile(CancellationToken token)
