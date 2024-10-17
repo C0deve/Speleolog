@@ -77,11 +77,17 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
             .SelectMany(x=> x.Select(infos => infos.Open))
             .Merge()
             .SelectAsync((templateInfos, token) => OpenFilesFromPathAsync([templateInfos.Path], token))
-            .Subscribe();
+            .Subscribe()
+            .DisposeWith(_disposables);
 
         Observable
             .Return(State.TemplateFolder)
             .InvokeCommand(ReadTemplateFolder)
+            .DisposeWith(_disposables);
+        
+        Observable.Return(state.LastOpenFiles)
+            .SelectAsync(OpenFilesFromPathAsync)
+            .Subscribe()
             .DisposeWith(_disposables);
     }
 
