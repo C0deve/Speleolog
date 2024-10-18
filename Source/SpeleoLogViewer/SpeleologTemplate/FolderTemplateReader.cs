@@ -12,7 +12,7 @@ public class FolderTemplateReader
         try
         {
             return Directory
-                .EnumerateFiles(path, $"*{SpeleologTemplateReader.Extension}")
+                .EnumerateFiles(path, $"*{SpeleologTemplateRepository.Extension}")
                 .Select(filePath => new TemplateInfos(filePath))
                 .ToImmutableArray();
         }

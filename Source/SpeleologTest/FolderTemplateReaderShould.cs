@@ -13,6 +13,6 @@ public class FolderTemplateReaderShould
             .Select(infos => infos.Name)
             .ShouldBe(["MyTemplate1", "MyTemplate2", "MyTemplate3"]);
 
-        new SpeleologTemplateReader().ReadAsync(templateInfosList[0].Path).ShouldNotBeNull();
+        new SpeleologTemplateRepository().ReadAsync(templateInfosList[0].Path).ShouldNotBeNull();
     }
 }

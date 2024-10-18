@@ -34,6 +34,8 @@
                     </MenuItem>
                     <Separator />
                     <MenuItem Header="_Template Folder" Command="{Binding OpenTemplateFolderCommand}" />
+                    <Separator />
+                    <MenuItem Header="_Create Template from open files" Command="{Binding CreateTemplateCommand}" />
                 </MenuItem>
             </Menu>
         </StackPanel>

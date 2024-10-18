@@ -27,7 +27,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
 
     private readonly IStorageProvider _storageProvider;
     private readonly ISchedulerProvider _schedulerProvider;
-    private readonly ISpeleologTemplateReader _templateReader;
+    private readonly ISpeleologTemplateRepository _templateRepository;
     private readonly DockFactory _factory;
     private readonly FileChangedObservableFactory _fileChangedObservableFactory;
 
@@ -35,11 +35,11 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
     public ObservableCollection<string> ErrorMessages { get; } = [];
     public ReactiveCommand<Unit, Unit> OpenFileCommand { get; }
     public ReactiveCommand<Unit, bool> OpenTemplateFolderCommand { get; }
+    public ReactiveCommand<Unit, Unit> CreateTemplateCommand { get; }
     private ReactiveCommand<string, IReadOnlyList<TemplateInfos>> ReadTemplateFolder { get; }
 
     private readonly ObservableAsPropertyHelper<IReadOnlyList<TemplateInfos>> _templateInfosList;
     public IReadOnlyList<TemplateInfos> TemplateInfosList => _templateInfosList.Value;
-
     public SpeleologState State { get; }
 
     public MainWindowVM(IStorageProvider storageProvider,
@@ -47,12 +47,12 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory,
         SpeleologState state,
         ISchedulerProvider schedulerProvider,
-        ISpeleologTemplateReader templateReader,
+        ISpeleologTemplateRepository templateRepository,
         FolderTemplateReader folderTemplateReader)
     {
         _storageProvider = storageProvider;
         _schedulerProvider = schedulerProvider;
-        _templateReader = templateReader;
+        _templateRepository = templateRepository;
         _factory = new DockFactory();
         State = state with { LastOpenFiles = [] };
         Layout = _factory.CreateLayout();
@@ -67,6 +67,11 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
 
         _fileChangedObservableFactory = new FileChangedObservableFactory(fileSystemObserverFactory);
 
+        CreateTemplateCommand = ReactiveCommand.CreateFromTask(() => 
+            new SpeleologTemplateRepository().WriteToDiskAsync(
+                State.TemplateFolder, 
+                new SpeleologTemplate.SpeleologTemplate("_New_"+DateTime.Now.ToLongDateString(), 
+                    State.LastOpenFiles)));
         OpenFileCommand = ReactiveCommand.CreateFromTask(OpenFile);
         OpenTemplateFolderCommand = ReactiveCommand.CreateFromTask(() => launcher.LaunchDirectoryInfoAsync(Directory.CreateDirectory(State.TemplateFolder)));
         ReadTemplateFolder = ReactiveCommand.Create<string, IReadOnlyList<TemplateInfos>>(folderTemplateReader.Read);
@@ -90,6 +95,11 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         Observable.Return(state.LastOpenFiles)
             .SelectAsync(OpenFilesFromPathAsync)
             .Subscribe()
+            .DisposeWith(_disposables);
+        
+        CreateTemplateCommand
+            .Select(_ => State.TemplateFolder)
+            .InvokeCommand(ReadTemplateFolder)
             .DisposeWith(_disposables);
     }
 
@@ -121,7 +131,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         {
             foreach (var givenFilePath in filesPath)
             {
-                if (_templateReader.IsTemplateFile(givenFilePath))
+                if (_templateRepository.IsTemplateFile(givenFilePath))
                     foreach (var pathFromTemplate in await GetFilesFromTemplate(givenFilePath, token))
                         CreateAndDock(pathFromTemplate);
                 else
@@ -135,7 +145,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
     }
 
     private async Task<List<string>> GetFilesFromTemplate(string givenFilePath, CancellationToken token) =>
-        (await _templateReader.ReadAsync(givenFilePath, token))?.Files ?? [];
+        (await _templateRepository.ReadAsync(givenFilePath, token))?.Files ?? [];
 
     private Task<IReadOnlyList<IStorageFile>> DoOpenFilePickerAsync() =>
         _storageProvider

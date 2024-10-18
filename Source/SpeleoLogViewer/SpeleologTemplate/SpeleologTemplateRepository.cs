@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SpeleoLogViewer.SpeleologTemplate;
 
-public class SpeleologTemplateReader : ISpeleologTemplateReader
+public class SpeleologTemplateRepository : ISpeleologTemplateRepository
 {
     public const string Extension = ".speleolog";
 
@@ -24,11 +24,18 @@ public class SpeleologTemplateReader : ISpeleologTemplateReader
         var speleologTemplate = JsonSerializer.Deserialize<SpeleologTemplate>(fileContent, _options);
         if (speleologTemplate is null) return null;
 
-        return speleologTemplate with { Name = filePath.Replace(Extension, "") };
+        return speleologTemplate with { Name = Path.GetFileName(filePath).Replace(Extension, "") };
     }
 
     private readonly JsonSerializerOptions _options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
+
+    public async Task WriteToDiskAsync(string folderPath, SpeleologTemplate speleologTemplate, CancellationToken token = default)
+    {
+        var fileName = Path.Combine(folderPath, $"{speleologTemplate.Name}{Extension}");
+        await using var createStream = File.Create(fileName);
+        await JsonSerializer.SerializeAsync(createStream, speleologTemplate, _options, cancellationToken: token);
+    }
 }

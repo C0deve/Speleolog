@@ -3,8 +3,9 @@ using System.Threading.Tasks;
 
 namespace SpeleoLogViewer.SpeleologTemplate;
 
-public interface ISpeleologTemplateReader
+public interface ISpeleologTemplateRepository
 {
     Task<SpeleologTemplate?> ReadAsync(string filePath, CancellationToken token = default);
     bool IsTemplateFile(string filePath);
+    Task WriteToDiskAsync(string folderPath, SpeleologTemplate speleologTemplate, CancellationToken token = default);
 }
