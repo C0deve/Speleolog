@@ -14,14 +14,13 @@ public class FileSystemChangedObserverShould
     {
         var actual = 0;
         var filePath = Utils.CreateUniqueEmptyFile();
-        var scheduler = new TestScheduler();
         var factory = new FileChangedObservableFactory(directoryPath => new FileSystemChangedWatcher(directoryPath));
         var disposable = factory
-            .BuildFileChangedObservable(filePath, scheduler)
+            .BuildFileChangedObservable(filePath)
             .Subscribe(_ => actual++);
         
         await File.AppendAllLinesAsync(filePath, ["a"]);
-        scheduler.AdvanceBy(_throttleDurationPlusOne.Ticks + 1);
+        await Task.Delay(FileChangedObservableFactory.ThrottleDuration + TimeSpan.FromMilliseconds(100));
 
         actual.ShouldBe(1);
         

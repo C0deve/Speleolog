@@ -30,6 +30,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
     private readonly ISpeleologTemplateRepository _templateRepository;
     private readonly DockFactory _factory;
     private readonly FileChangedObservableFactory _fileChangedObservableFactory;
+    private readonly Func<ITextFileLoaderV2> _fileReaderFactory;
 
     public IRootDock Layout { get; }
     public ObservableCollection<string> ErrorMessages { get; } = [];
@@ -47,11 +48,12 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory,
         SpeleologState state,
         ISchedulerProvider schedulerProvider,
-        ISpeleologTemplateRepository templateRepository)
+        ISpeleologTemplateRepository templateRepository, Func<ITextFileLoaderV2> fileReaderFactory)
     {
         _storageProvider = storageProvider;
         _schedulerProvider = schedulerProvider;
         _templateRepository = templateRepository;
+        _fileReaderFactory = fileReaderFactory;
         _factory = new DockFactory();
         State = state with { LastOpenFiles = [] };
         Layout = _factory.CreateLayout();
@@ -166,10 +168,11 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         new(
             filePath: path,
             fileChangedStream: _fileChangedObservableFactory.BuildFileChangedObservable(path, _schedulerProvider.TaskpoolScheduler),
-            new TextFileLoaderV2(),
+            _fileReaderFactory(),
             100,
             "error",
             RxApp.TaskpoolScheduler);
+
 
     private void AddToDock(IDockable logViewModel)
     {

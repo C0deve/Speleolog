@@ -3,13 +3,14 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using SpeleoLogViewer.ApplicationState;
 using SpeleoLogViewer.FileChanged;
+using SpeleoLogViewer.LogFileViewer.V2;
 using SpeleoLogViewer.Main;
 using SpeleoLogViewer.SpeleologTemplate;
 using MainWindow = SpeleoLogViewer.Main.MainWindow;
 
 namespace SpeleoLogViewer;
 
-public partial class App : Application
+public class App : Application
 {
     public override void Initialize()
     {
@@ -30,7 +31,8 @@ public partial class App : Application
                 FileSystemWatcherFactory, 
                 lastState, 
                 new SchedulerProvider(), 
-                new SpeleologTemplateRepository());
+                new SpeleologTemplateRepository(),
+                () => new TextFileLoaderV2());
             
             desktop.MainWindow.Closing += (_, _) =>
             {

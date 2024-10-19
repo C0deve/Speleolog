@@ -25,11 +25,12 @@ public class MainViewModelShould
             .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { file }.AsReadOnly()));
         using var sut = new MainWindowVM(
             storageProvider, 
-            new EmptyFileLoader(), 
-            _ => Substitute.For<IFileSystemChangedWatcher>(), 
+            Substitute.For<ILauncher>(), 
+            _ => Substitute.For<IFileSystemChangedWatcher>(),
             SpeleologState.Default, 
             new SchedulerProvider(), 
-            Substitute.For<ISpeleologTemplateRepository>());
+            Substitute.For<ISpeleologTemplateRepository>(),
+            () => new TextFileLoaderV2ForTest("log content"));
 
         sut.OpenFileCommand.Execute().Subscribe();
 
@@ -47,14 +48,15 @@ public class MainViewModelShould
             .OpenFilePickerAsync(Arg.Any<FilePickerOpenOptions>())
             .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { file }.AsReadOnly()));
         using var sut = new MainWindowVM(
-            storageProvider,
-            new EmptyFileLoader(),
+            storageProvider, 
+            Substitute.For<ILauncher>(), 
             _ => Substitute.For<IFileSystemChangedWatcher>(),
             SpeleologState.Default,
             new SchedulerProvider(),
-            Substitute.For<ISpeleologTemplateRepository>());
+            Substitute.For<ISpeleologTemplateRepository>(),
+            () => new TextFileLoaderV2ForTest("log content"));
         sut.OpenFileCommand.Execute().Subscribe();
-        var documentDock = ((DocumentDock)sut.Layout!.ActiveDockable!).ActiveDockable!;
+        var documentDock = ((DocumentDock)sut.Layout.ActiveDockable!).ActiveDockable!;
 
         sut.Layout.Factory!.CloseDockable(documentDock);
 
@@ -70,14 +72,15 @@ public class MainViewModelShould
         templateFile.Path.Returns(new Uri($"file://{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/MyTemplate.speleolog"));
         storageProvider
             .OpenFilePickerAsync(Arg.Any<FilePickerOpenOptions>())
-            .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { templateFile }.AsReadOnly()));
+            .Returns(Task.FromResult<IReadOnlyList<IStorageFile>>(new[] { templateFile }.AsReadOnly()));
         using var sut = new MainWindowVM(
-            storageProvider, 
-            new EmptyFileLoader(), 
-            _ => Substitute.For<IFileSystemChangedWatcher>(), 
+            storageProvider,
+            Substitute.For<ILauncher>(),
+            _ => Substitute.For<IFileSystemChangedWatcher>(),
             SpeleologState.Default, 
             new SchedulerProvider(), 
-            new SpeleologTemplateRepository());
+            new SpeleologTemplateRepository(),
+            () => new TextFileLoaderV2ForTest("log content"));
 
         await sut.OpenFileCommand.Execute();
         sut.State.LastOpenFiles.Count.ShouldBe(1);
@@ -92,14 +95,15 @@ public class MainViewModelShould
         file.Path.Returns(new Uri("c:/test.txt"));
         storageProvider
             .OpenFilePickerAsync(Arg.Any<FilePickerOpenOptions>())
-            .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { file }.AsReadOnly()));
+            .Returns(Task.FromResult<IReadOnlyList<IStorageFile>>(new[] { file }.AsReadOnly()));
         using var sut = new MainWindowVM(
-            storageProvider, 
-            new EmptyFileLoader(), 
-            _ => Substitute.For<IFileSystemChangedWatcher>(), 
+            storageProvider,
+            Substitute.For<ILauncher>(),
+            _ => Substitute.For<IFileSystemChangedWatcher>(),
             SpeleologState.Default, 
             new SchedulerProvider(), 
-            Substitute.For<ISpeleologTemplateRepository>());
+            Substitute.For<ISpeleologTemplateRepository>(),
+            () => new TextFileLoaderV2ForTest("log content"));
 
         sut.OpenFileCommand.Execute().Subscribe();
         sut.OpenFileCommand.Execute().Subscribe();
@@ -116,23 +120,25 @@ public class MainViewModelShould
         file.Path.Returns(new Uri("c:\\test.txt"));
         storageProvider
             .OpenFilePickerAsync(Arg.Any<FilePickerOpenOptions>())
-            .Returns(Task.FromResult((IReadOnlyList<IStorageFile>)new[] { file }.AsReadOnly()));
+            .Returns(Task.FromResult<IReadOnlyList<IStorageFile>>(new[] { file }.AsReadOnly()));
         var scheduler = new TestScheduler();
         
         using var sut = new MainWindowVM(
             storageProvider, 
-            new EmptyFileLoader(), 
-            _ => Substitute.For<IFileSystemChangedWatcher>(), 
+            Substitute.For<ILauncher>(),
+            _ => Substitute.For<IFileSystemChangedWatcher>(),
             new SpeleologState(["c:\\test.txt"], false, "Folder"), 
             new TestSchedulerProvider(scheduler), 
-            Substitute.For<ISpeleologTemplateRepository>());
+            Substitute.For<ISpeleologTemplateRepository>(),
+            () => new TextFileLoaderV2ForTest("log content"));
         
         scheduler.AdvanceBy(10000);
-        var state = sut.State;
-        state.LastOpenFiles.ShouldBe(["c:\\test.txt"]);
-        state.TemplateFolder.ShouldBe("Folder");
-        state.AppendFromBottom.ShouldBe(false);
-        //sut.State.ShouldBe(new SpeleologState(["c:\\test.txt"], false,"Folder"));
+        sut.State.ShouldSatisfyAllConditions(x =>
+        {
+            x.LastOpenFiles.ShouldBe(["c:\\test.txt"]);
+            x.TemplateFolder.ShouldBe("Folder");
+            x.AppendFromBottom.ShouldBe(false);
+        });
         sut.CloseLayout();
     }
 }
