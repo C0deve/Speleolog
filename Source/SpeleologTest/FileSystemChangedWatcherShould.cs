@@ -11,7 +11,7 @@ public class FileSystemChangedWatcherShould
         var isInvoked = false;
         var filePath = Utils.CreateUniqueEmptyFile();
         var sut = new FileSystemChangedWatcher(Path.GetDirectoryName(filePath)!);
-        sut.Changed += (sender, args) =>
+        sut.Changed += (_, _) =>
         {
             isInvoked = true;
         };

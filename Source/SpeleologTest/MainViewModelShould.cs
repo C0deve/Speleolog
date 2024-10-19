@@ -29,7 +29,7 @@ public class MainViewModelShould
             _ => Substitute.For<IFileSystemChangedWatcher>(), 
             SpeleologState.Default, 
             new SchedulerProvider(), 
-            Substitute.For<ISpeleologTemplateRepository>(), new FolderTemplateReader());
+            Substitute.For<ISpeleologTemplateRepository>());
 
         sut.OpenFileCommand.Execute().Subscribe();
 
@@ -52,7 +52,7 @@ public class MainViewModelShould
             _ => Substitute.For<IFileSystemChangedWatcher>(),
             SpeleologState.Default,
             new SchedulerProvider(),
-            Substitute.For<ISpeleologTemplateRepository>(), new FolderTemplateReader());
+            Substitute.For<ISpeleologTemplateRepository>());
         sut.OpenFileCommand.Execute().Subscribe();
         var documentDock = ((DocumentDock)sut.Layout!.ActiveDockable!).ActiveDockable!;
 
@@ -77,7 +77,7 @@ public class MainViewModelShould
             _ => Substitute.For<IFileSystemChangedWatcher>(), 
             SpeleologState.Default, 
             new SchedulerProvider(), 
-            new SpeleologTemplateRepository(), new FolderTemplateReader());
+            new SpeleologTemplateRepository());
 
         await sut.OpenFileCommand.Execute();
         sut.State.LastOpenFiles.Count.ShouldBe(1);
@@ -99,7 +99,7 @@ public class MainViewModelShould
             _ => Substitute.For<IFileSystemChangedWatcher>(), 
             SpeleologState.Default, 
             new SchedulerProvider(), 
-            Substitute.For<ISpeleologTemplateRepository>(), new FolderTemplateReader());
+            Substitute.For<ISpeleologTemplateRepository>());
 
         sut.OpenFileCommand.Execute().Subscribe();
         sut.OpenFileCommand.Execute().Subscribe();
@@ -125,7 +125,7 @@ public class MainViewModelShould
             _ => Substitute.For<IFileSystemChangedWatcher>(), 
             new SpeleologState(["c:\\test.txt"], false, "Folder"), 
             new TestSchedulerProvider(scheduler), 
-            Substitute.For<ISpeleologTemplateRepository>(), new FolderTemplateReader());
+            Substitute.For<ISpeleologTemplateRepository>());
         
         scheduler.AdvanceBy(10000);
         var state = sut.State;

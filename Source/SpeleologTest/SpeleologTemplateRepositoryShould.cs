@@ -53,4 +53,15 @@ public class SpeleologTemplateRepositoryShould
         
         Directory.Delete(templateFolderPath,true);
     }
+    
+    [Fact]
+    public void ReadAll()
+    {
+        var templateInfosList = new SpeleologTemplateRepository().ReadAll("Templates");
+        templateInfosList
+            .Select(infos => infos.Name)
+            .ShouldBe(["MyTemplate1", "MyTemplate2", "MyTemplate3"]);
+
+        new SpeleologTemplateRepository().ReadAsync(templateInfosList[0].Path).ShouldNotBeNull();
+    }
 }

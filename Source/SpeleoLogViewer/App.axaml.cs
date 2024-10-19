@@ -30,8 +30,7 @@ public partial class App : Application
                 FileSystemWatcherFactory, 
                 lastState, 
                 new SchedulerProvider(), 
-                new SpeleologTemplateRepository(), 
-                new FolderTemplateReader());
+                new SpeleologTemplateRepository());
             
             desktop.MainWindow.Closing += (_, _) =>
             {

@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,5 +40,20 @@ public class SpeleologTemplateRepository : ISpeleologTemplateRepository
         var fileName = Path.Combine(folderPath, $"{speleologTemplate.Name}{Extension}");
         await using var createStream = File.Create(fileName);
         await JsonSerializer.SerializeAsync(createStream, speleologTemplate, _options, cancellationToken: token);
+    }
+    
+    public IReadOnlyList<TemplateInfos> ReadAll(string folderPath)
+    {
+        try
+        {
+            return Directory
+                .EnumerateFiles(folderPath, $"*{SpeleologTemplateRepository.Extension}")
+                .Select(filePath => new TemplateInfos(filePath))
+                .ToImmutableArray();
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return [];
+        }
     }
 }

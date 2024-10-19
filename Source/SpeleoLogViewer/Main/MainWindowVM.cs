@@ -47,8 +47,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory,
         SpeleologState state,
         ISchedulerProvider schedulerProvider,
-        ISpeleologTemplateRepository templateRepository,
-        FolderTemplateReader folderTemplateReader)
+        ISpeleologTemplateRepository templateRepository)
     {
         _storageProvider = storageProvider;
         _schedulerProvider = schedulerProvider;
@@ -68,13 +67,13 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         _fileChangedObservableFactory = new FileChangedObservableFactory(fileSystemObserverFactory);
 
         CreateTemplateCommand = ReactiveCommand.CreateFromTask(() => 
-            new SpeleologTemplateRepository().WriteToDiskAsync(
+            _templateRepository.WriteToDiskAsync(
                 State.TemplateFolder, 
                 new SpeleologTemplate.SpeleologTemplate("_New_"+DateTime.Now.ToLongDateString(), 
                     State.LastOpenFiles)));
         OpenFileCommand = ReactiveCommand.CreateFromTask(OpenFile);
         OpenTemplateFolderCommand = ReactiveCommand.CreateFromTask(() => launcher.LaunchDirectoryInfoAsync(Directory.CreateDirectory(State.TemplateFolder)));
-        ReadTemplateFolder = ReactiveCommand.Create<string, IReadOnlyList<TemplateInfos>>(folderTemplateReader.Read);
+        ReadTemplateFolder = ReactiveCommand.Create<string, IReadOnlyList<TemplateInfos>>(_templateRepository.ReadAll);
         _templateInfosList = ReadTemplateFolder
             .ToProperty(this, nameof(TemplateInfosList))
             .DisposeWith(_disposables);
