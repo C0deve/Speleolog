@@ -31,7 +31,7 @@ public class App : Application
                 FileSystemWatcherFactory, 
                 lastState, 
                 new SchedulerProvider(), 
-                new SpeleologTemplateRepository(),
+                new SpeleologTemplateRepositoryV2(),
                 () => new TextFileLoaderV2());
             
             desktop.MainWindow.Closing += (_, _) =>

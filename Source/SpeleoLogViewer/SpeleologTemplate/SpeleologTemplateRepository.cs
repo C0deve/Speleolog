@@ -24,6 +24,7 @@ public class SpeleologTemplateRepository : ISpeleologTemplateRepository
         if (!File.Exists(filePath)) return null;
 
         var fileContent = await File.ReadAllTextAsync(filePath, token).ConfigureAwait(false);
+        if(string.IsNullOrEmpty(fileContent)) return null;
         var speleologTemplate = JsonSerializer.Deserialize<SpeleologTemplate>(fileContent, _options);
         if (speleologTemplate is null) return null;
 
@@ -41,14 +42,17 @@ public class SpeleologTemplateRepository : ISpeleologTemplateRepository
         await using var createStream = File.Create(fileName);
         await JsonSerializer.SerializeAsync(createStream, speleologTemplate, _options, cancellationToken: token);
     }
-    
+
     public IReadOnlyList<TemplateInfos> ReadAll(string folderPath)
     {
         try
         {
             return Directory
-                .EnumerateFiles(folderPath, $"*{SpeleologTemplateRepository.Extension}")
-                .Select(filePath => new TemplateInfos(filePath))
+                .EnumerateFiles(folderPath, $"*{Extension}")
+                .Select(filePath => new TemplateInfos(
+                    filePath,
+                    Path.GetFileNameWithoutExtension(filePath)
+                ))
                 .ToImmutableArray();
         }
         catch (DirectoryNotFoundException)

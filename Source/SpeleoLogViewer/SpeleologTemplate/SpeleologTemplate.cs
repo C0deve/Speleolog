@@ -1,5 +1,3 @@
-﻿using System.Collections.Generic;
+﻿namespace SpeleoLogViewer.SpeleologTemplate;
 
-namespace SpeleoLogViewer.SpeleologTemplate;
-
-public record SpeleologTemplate(string Name, List<string> Files);
+public record SpeleologTemplate(string Name, string[] Files);

@@ -5,19 +5,14 @@ namespace SpeleoLogViewer.SpeleologTemplate;
 
 public record TemplateInfos
 {
-    public TemplateInfos(string path)
+    public TemplateInfos(string path, string name)
     {
         Path = path;
-        Name = System.IO.Path.GetFileNameWithoutExtension(path);
+        Name = name;
         Open = ReactiveCommand.Create(() => this);
     }
 
     public string Name { get; }
     public ReactiveCommand<Unit, TemplateInfos> Open { get; }
     public string Path { get; }
-
-    public void Deconstruct(out string path)
-    {
-        path = Path;
-    }
 }

@@ -27,7 +27,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
 
     private readonly IStorageProvider _storageProvider;
     private readonly ISchedulerProvider _schedulerProvider;
-    private readonly ISpeleologTemplateRepository _templateRepository;
+    private readonly ISpeleologTemplateRepositoryV2 _templateRepository;
     private readonly DockFactory _factory;
     private readonly FileChangedObservableFactory _fileChangedObservableFactory;
     private readonly Func<ITextFileLoaderV2> _fileReaderFactory;
@@ -36,6 +36,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
     public ObservableCollection<string> ErrorMessages { get; } = [];
     public ReactiveCommand<Unit, Unit> OpenFileCommand { get; }
     public ReactiveCommand<Unit, bool> OpenTemplateFolderCommand { get; }
+    public ReactiveCommand<Unit, Unit> ConvertTemplateV1ToV2Command { get; }
     public ReactiveCommand<Unit, Unit> CreateTemplateCommand { get; }
     private ReactiveCommand<string, IReadOnlyList<TemplateInfos>> ReadTemplateFolder { get; }
 
@@ -48,7 +49,8 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory,
         SpeleologState state,
         ISchedulerProvider schedulerProvider,
-        ISpeleologTemplateRepository templateRepository, Func<ITextFileLoaderV2> fileReaderFactory)
+        ISpeleologTemplateRepositoryV2 templateRepository,
+        Func<ITextFileLoaderV2> fileReaderFactory)
     {
         _storageProvider = storageProvider;
         _schedulerProvider = schedulerProvider;
@@ -68,11 +70,22 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
 
         _fileChangedObservableFactory = new FileChangedObservableFactory(fileSystemObserverFactory);
 
-        CreateTemplateCommand = ReactiveCommand.CreateFromTask(() => 
-            _templateRepository.WriteToDiskAsync(
-                State.TemplateFolder, 
-                new SpeleologTemplate.SpeleologTemplate("_New_"+DateTime.Now.ToLongDateString(), 
-                    State.LastOpenFiles)));
+        ConvertTemplateV1ToV2Command = ReactiveCommand.CreateFromTask(async () =>
+        {
+            var v1 = new SpeleologTemplateRepository();
+            foreach (var templateInfos in v1.ReadAll(State.TemplateFolder))
+            {
+                var template = await v1.ReadAsync(templateInfos.Path);
+                if(template == null) continue;
+                await _templateRepository.SaveAsync(State.TemplateFolder, template);
+            }
+        });
+
+        CreateTemplateCommand = ReactiveCommand.CreateFromTask(() =>
+            _templateRepository.SaveAsync(
+                State.TemplateFolder,
+                new SpeleologTemplate.SpeleologTemplate("_New_" + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss"),
+                    State.LastOpenFiles.ToArray())));
         OpenFileCommand = ReactiveCommand.CreateFromTask(OpenFile);
         OpenTemplateFolderCommand = ReactiveCommand.CreateFromTask(() => launcher.LaunchDirectoryInfoAsync(Directory.CreateDirectory(State.TemplateFolder)));
         ReadTemplateFolder = ReactiveCommand.Create<string, IReadOnlyList<TemplateInfos>>(_templateRepository.ReadAll);
@@ -97,7 +110,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
             .SelectAsync(OpenFilesFromPathAsync)
             .Subscribe()
             .DisposeWith(_disposables);
-        
+
         CreateTemplateCommand
             .Select(_ => State.TemplateFolder)
             .InvokeCommand(ReadTemplateFolder)
@@ -145,7 +158,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         }
     }
 
-    private async Task<List<string>> GetFilesFromTemplate(string givenFilePath, CancellationToken token) =>
+    private async Task<string[]> GetFilesFromTemplate(string givenFilePath, CancellationToken token) =>
         (await _templateRepository.ReadAsync(givenFilePath, token))?.Files ?? [];
 
     private Task<IReadOnlyList<IStorageFile>> DoOpenFilePickerAsync() =>

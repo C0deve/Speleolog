@@ -38,7 +38,7 @@ public class SpeleologTemplateRepositoryShould
         const string templateFolderPath = "TemplatesWrite";
         Directory.CreateDirectory(templateFolderPath);
         var name = Guid.NewGuid().ToString();
-        List<string> files = ["log.txt"];
+        string[] files = ["log.txt"];
 
         await new SpeleologTemplateRepository().WriteToDiskAsync(templateFolderPath, new SpeleologTemplate(name, files));
 

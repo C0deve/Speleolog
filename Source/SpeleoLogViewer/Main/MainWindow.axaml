@@ -36,6 +36,8 @@
                     <MenuItem Header="_Template Folder" Command="{Binding OpenTemplateFolderCommand}" />
                     <Separator />
                     <MenuItem Header="_Create Template from open files" Command="{Binding CreateTemplateCommand}" />
+                    <Separator />
+                    <MenuItem Header="_Convert Template from v1 to v2" Command="{Binding ConvertTemplateV1ToV2Command}" />
                 </MenuItem>
             </Menu>
         </StackPanel>

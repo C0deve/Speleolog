@@ -29,7 +29,7 @@ public class MainViewModelShould
             _ => Substitute.For<IFileSystemChangedWatcher>(),
             SpeleologState.Default, 
             new SchedulerProvider(), 
-            Substitute.For<ISpeleologTemplateRepository>(),
+            Substitute.For<ISpeleologTemplateRepositoryV2>(),
             () => new TextFileLoaderV2ForTest("log content"));
 
         sut.OpenFileCommand.Execute().Subscribe();
@@ -53,7 +53,7 @@ public class MainViewModelShould
             _ => Substitute.For<IFileSystemChangedWatcher>(),
             SpeleologState.Default,
             new SchedulerProvider(),
-            Substitute.For<ISpeleologTemplateRepository>(),
+            Substitute.For<ISpeleologTemplateRepositoryV2>(),
             () => new TextFileLoaderV2ForTest("log content"));
         sut.OpenFileCommand.Execute().Subscribe();
         var documentDock = ((DocumentDock)sut.Layout.ActiveDockable!).ActiveDockable!;
@@ -79,7 +79,7 @@ public class MainViewModelShould
             _ => Substitute.For<IFileSystemChangedWatcher>(),
             SpeleologState.Default, 
             new SchedulerProvider(), 
-            new SpeleologTemplateRepository(),
+            new SpeleologTemplateRepositoryV2(),
             () => new TextFileLoaderV2ForTest("log content"));
 
         await sut.OpenFileCommand.Execute();
@@ -102,11 +102,11 @@ public class MainViewModelShould
             _ => Substitute.For<IFileSystemChangedWatcher>(),
             SpeleologState.Default, 
             new SchedulerProvider(), 
-            Substitute.For<ISpeleologTemplateRepository>(),
+            Substitute.For<ISpeleologTemplateRepositoryV2>(),
             () => new TextFileLoaderV2ForTest("log content"));
 
         sut.OpenFileCommand.Execute().Subscribe();
-        sut.OpenFileCommand.Execute().Subscribe();
+        sut.OpenFileCommand.Execute().Subscribe();  
 
         sut.State.LastOpenFiles.Count.ShouldBe(1);
         sut.CloseLayout();
@@ -129,7 +129,7 @@ public class MainViewModelShould
             _ => Substitute.For<IFileSystemChangedWatcher>(),
             new SpeleologState(["c:\\test.txt"], false, "Folder"), 
             new TestSchedulerProvider(scheduler), 
-            Substitute.For<ISpeleologTemplateRepository>(),
+            Substitute.For<ISpeleologTemplateRepositoryV2>(),
             () => new TextFileLoaderV2ForTest("log content"));
         
         scheduler.AdvanceBy(10000);
