@@ -73,13 +73,13 @@ public class CacheV2Should
     public void ReturnFilteredRows() =>
         InitCache("a", "b", "a")
             .SetSearchTerm("a")[Enumerable.Range(0, 2)]
-            .ShouldBe([new LogLine("a"), new LogLine("a")]);
+            .ShouldBe([new LogRow("a"), new LogRow("a")]);
 
     [Fact]
     public void Mask() =>
         InitCache("aa", "ab", "aaab")
             .SetMask("a")[..]
-            .ShouldBe([new LogLine("a"), new LogLine("b"), new LogLine("aab")]);
+            .ShouldBe([new LogRow("a"), new LogRow("b"), new LogRow("aab")]);
 
     [Fact]
     public void ReturnFilteredRowsIfNoMatch() =>
@@ -91,7 +91,7 @@ public class CacheV2Should
     public void ReturnFilteredRowsIfIndexOutOfRange() =>
         InitCache("a", "b", "c")
             .SetSearchTerm("a")[Enumerable.Range(0, 10)]
-            .ShouldBe([new LogLine("a")]);
+            .ShouldBe([new LogRow("a")]);
 
     [Fact]
     public void ReturnFilteredRowsIfIndexOutOfRange2() =>

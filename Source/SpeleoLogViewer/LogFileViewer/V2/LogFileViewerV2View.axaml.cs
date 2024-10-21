@@ -86,7 +86,7 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
                 DeleteLines(_logFileContent, toTheBottom.RemovedFromTopCount, toTheBottom.PreviousPageSize, _scrollViewer);
                 break;
             case AddedToTheTop toTheTop:
-                foreach (var run in Map(toTheTop.Rows))
+                foreach (var run in Map(toTheTop.Rows, true))
                     PushToTop(run);
                 DeleteLines(_logFileContent, toTheTop.RemovedFromBottomCount, toTheTop.PreviousPageSize, toTheTop.IsOnTop ? null : _scrollViewer, true);
                 break;
@@ -107,7 +107,9 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
         if (isFromBottom)
             runs = runs.Reverse();
 
-        var toDelete = DeleteLines(runs.ToArray(), lineToDeleteCount, isFromBottom ? RemoveFromBottom : RemoveFromTop);
+        var toDelete =
+            DeleteLines(runs.ToArray(), lineToDeleteCount, isFromBottom ? RemoveFromBottom : RemoveFromTop)
+                .ToArray();
 
         foreach (var run in toDelete)
             selectableTextBlock.Inlines.Remove(run);
@@ -124,9 +126,10 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
 
     private static IEnumerable<Run> DeleteLines(Run[] runs, int lineToDeleteCount, Func<string, int, LineResult> remove)
     {
-        while (lineToDeleteCount > 0)
+        foreach (var run in runs)
         {
-            var run = runs.First();
+            if (lineToDeleteCount == 0) break;
+
             if (run.Text is null)
             {
                 yield return run;
@@ -145,7 +148,6 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
 
             Debug.WriteLine($"delete {result.LineCount} rows from bottom, Length {run.Text.Length} => {result.Text.Length}");
             run.Text = result.Text;
-            break;
         }
     }
 
@@ -157,28 +159,52 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
         scrollViewer.SetCurrentValue(ScrollViewer.OffsetProperty, scrollViewer.Offset + new Vector(0, offsetDelta));
     }
 
-    private IEnumerable<Run> Map(IEnumerable<LogLine> groups) =>
-        groups.AggregateLog().Select(MapToRun);
+    private IEnumerable<Run> Map(IEnumerable<LogRow> groups, bool reverse = false) =>
+        groups.AggregateLog().SelectMany(group => MapToRun(group, reverse));
 
-    private Run MapToRun(LogGroup group)
+    private IEnumerable<Run> MapToRun(LogGroup group, bool reverse)
     {
         var rows = group
             .Rows
             .Reverse()
             .Select(s => s + Environment.NewLine);
 
-        var run = new Run(string.Concat(rows));
+        var concat = string.Concat(rows);
 
-        if (group.Key.IsError)
-            run.Classes.Add("Error");
+        var runs = concat.Contains("10")
+            ? BindHighlightRun(concat, "10", reverse)
+            : [new Run(concat)];
 
-        if (group.Key.IsNewLine)
+        foreach (var run in runs)
         {
-            run.Classes.Add("JustAdded");
-            AddTimerToRemoveClass(run);
-        }
+            if (group.Key.IsError)
+                run.Classes.Add("Error");
 
-        return run;
+            if (group.Key.IsNewLine)
+            {
+                run.Classes.Add("JustAdded");
+                AddTimerToRemoveClass(run);
+            }
+
+            yield return run;
+        }
+    }
+
+    private IEnumerable<Run> BindHighlightRun(string concat, string highlight, bool reverse)
+    {
+        var unLightList = concat.Split(highlight);
+        if (reverse) unLightList = unLightList.Reverse().ToArray();
+
+        return unLightList.Aggregate(new List<Run>(), (runs, unLight) =>
+        {
+            if (!string.IsNullOrEmpty(unLight))
+                runs.Add(new Run(unLight));
+            var highlightRun = new Run(highlight);
+            highlightRun.Classes.Add("HighLight");
+            runs.Add(highlightRun);
+
+            return runs;
+        }, runs => runs.SkipLast(1));
     }
 
     private void PushToTop(Run inline)

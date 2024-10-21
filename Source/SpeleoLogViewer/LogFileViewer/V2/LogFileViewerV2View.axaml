@@ -24,6 +24,10 @@
             <Style Selector="Run.Error">
                 <Setter Property="Foreground" Value="{StaticResource Error}" />
             </Style>
+            <Style Selector="Run.HighLight">
+                <Setter Property="Background" Value="DarkSalmon" />
+                <Setter Property="Foreground" Value="Indigo" />
+            </Style>
 
             <Style Selector="Run.JustAdded">
                 <Style.Animations>

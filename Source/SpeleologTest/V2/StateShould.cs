@@ -32,7 +32,7 @@ public class StateShould
             .Events
             .ShouldBe([
                 new AddedToTheTop(0, 0, true, rows: "123"),
-                new AddedToTheTop(0, 1, true, rows: LogLine.NewLine("4"))
+                new AddedToTheTop(0, 1, true, rows: LogRow.NewLine("4"))
             ]);
     }
 
@@ -45,7 +45,7 @@ public class StateShould
             .Events
             .ShouldBe([
                 new AddedToTheTop(0, 0, true, "1", "2", "3"),
-                new AddedToTheTop(3, 3, true, LogLine.NewLine("4"), LogLine.NewLine("5"), LogLine.NewLine("6")),
+                new AddedToTheTop(3, 3, true, LogRow.NewLine("4"), LogRow.NewLine("5"), LogRow.NewLine("6")),
             ]);
 
     [Fact]
@@ -94,7 +94,7 @@ public class StateShould
                 new AddedToTheTop(0, 0, true, "1", "1", "3", "1"),
                 new DeletedAll(),
                 new AddedToTheTop(0, 0, true, "1", "1", "1"),
-                new AddedToTheTop(0, 3, true, LogLine.NewLine("1"))
+                new AddedToTheTop(0, 3, true, LogRow.NewLine("1"))
             ]);
 
     [Fact]
@@ -112,7 +112,7 @@ public class StateShould
                 new AddedToTheTop(0, 0, true, "1", "1", "3", "1"),
                 new DeletedAll(),
                 new AddedToTheTop(0, 0, true, "", "", "3", ""),
-                new AddedToTheTop(0, 4, true, LogLine.NewLine(""))
+                new AddedToTheTop(0, 4, true, LogRow.NewLine(""))
             ]);
     }
 
@@ -149,7 +149,7 @@ public class StateShould
             .ShouldBe([
                 new AddedToTheTop(isOnTop: true, rows: Enumerable
                     .Range(90, 10)
-                    .Select(x => new LogLine($"{x}"))
+                    .Select(x => new LogRow($"{x}"))
                     .ToArray())
             ]);
 
@@ -164,7 +164,7 @@ public class StateShould
             .ToArray()
             .ShouldBe([
                     new DeletedAll(),
-                    new AddedToTheTop(isOnTop: true, rows: Enumerable.Repeat(new LogLine("a"), 10).ToArray())
+                    new AddedToTheTop(isOnTop: true, rows: Enumerable.Repeat(new LogRow("a"), 10).ToArray())
                 ]
             );
 
@@ -177,7 +177,7 @@ public class StateShould
             .Handle(new Previous())
             .Events
             .ShouldBe([
-                new AddedToTheBottom(10, 10, [..Enumerable.Range(40, 10).Select(x => $"{x}").Select(s => new LogLine(s))]),
+                new AddedToTheBottom(10, 10, [..Enumerable.Range(40, 10).Select(x => $"{x}").Select(s => new LogRow(s))]),
             ]);
 
     [Fact]
@@ -228,7 +228,7 @@ public class StateShould
             .Events
             .ShouldBe([
                 new DeletedAll(),
-                new AddedToTheTop(isOnTop: true, rows: [LogLine.Error("1"), LogLine.Error("1"), "3", LogLine.Error("1")])
+                new AddedToTheTop(isOnTop: true, rows: [LogRow.Error("1"), LogRow.Error("1"), "3", LogRow.Error("1")])
             ]);
 
     [Fact]

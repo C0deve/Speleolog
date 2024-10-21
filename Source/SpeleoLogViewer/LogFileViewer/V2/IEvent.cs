@@ -9,9 +9,9 @@ public interface IEvent
     public static IEvent DeletedAll => new DeletedAll();
 }
 
-public class EventBase(params LogLine[] rows) : ValueObject, IEvent
+public class EventBase(params LogRow[] rows) : ValueObject, IEvent
 {
-    public IReadOnlyCollection<LogLine> Rows { get; } = rows.ToArray().AsReadOnly();
+    public IReadOnlyCollection<LogRow> Rows { get; } = rows.ToArray().AsReadOnly();
 
     protected override IEnumerable<object> GetEqualityComponents()
     {
@@ -26,7 +26,7 @@ public class EventBase(params LogLine[] rows) : ValueObject, IEvent
     }
 }
 
-public class AddedToTheTop(int removedFromBottomCount = 0, int previousPageSize = 0, bool isOnTop = false, params LogLine[] rows) : EventBase(rows)
+public class AddedToTheTop(int removedFromBottomCount = 0, int previousPageSize = 0, bool isOnTop = false, params LogRow[] rows) : EventBase(rows)
 {
     public int RemovedFromBottomCount { get; } = removedFromBottomCount;
     public int PreviousPageSize { get; } = previousPageSize;
@@ -42,7 +42,7 @@ public class AddedToTheTop(int removedFromBottomCount = 0, int previousPageSize 
     }
 }
 
-public class AddedToTheBottom(int removedFromTopCount = 0, int previousPageSize = 0, params LogLine[] rows) : EventBase(rows)
+public class AddedToTheBottom(int removedFromTopCount = 0, int previousPageSize = 0, params LogRow[] rows) : EventBase(rows)
 {
     public int RemovedFromTopCount { get; } = removedFromTopCount;
     public int PreviousPageSize { get; } = previousPageSize;

@@ -56,7 +56,7 @@ internal static class ShouldyExtension
         });
     }
 
-    private static void ShouldBe(LogLine[] actualLogList, LogLine[] expectedLogList)
+    private static void ShouldBe(LogRow[] actualLogList, LogRow[] expectedLogList)
     {
         for (var i1 = 0; i1 < actualLogList.Length; i1++) 
             actualLogList[i1].ShouldBe(expectedLogList[i1], $"i1 = {i1}");

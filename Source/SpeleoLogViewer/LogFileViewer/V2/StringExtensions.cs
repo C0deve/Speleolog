@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace SpeleoLogViewer.LogFileViewer.V2;
 
@@ -52,7 +53,7 @@ public static class StringExtensions
             actualRowCount++;
             if (nthRow == actualRowCount) return new RowInfo(end - 1, nthRow);
 
-            // optimization : we know we are at the start of the break line. Move i to the end index
+            // optimization : we know we are at the start of the break row. Move i to the end index
             i += breakRowLength;
         }
 
@@ -70,5 +71,15 @@ public static class StringExtensions
     {
         var index = givenString.GetIndexOfNthLineFromEnd(nthRow);
         return new LineResult(givenString[..index.Index], index.LineCount);
+    }
+    
+    public static IEnumerable<int> AllIndexOf(this string text, string str, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
+    {
+        var index = text.IndexOf(str, comparisonType);
+        while(index != -1)
+        {
+            yield return index;
+            index = text.IndexOf(str, index + 1, comparisonType);
+        }
     }
 }

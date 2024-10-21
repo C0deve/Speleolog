@@ -39,18 +39,18 @@ public class CacheV2
         return this;
     }
 
-    public LogLine[] this[IEnumerable<int> range] =>
+    public LogRow[] this[IEnumerable<int> range] =>
         range
             .Where(i => i < _filteredIndex.Count)
             .Select(i => _filteredIndex[i])
-            .Select(x => new LogLine(_logs[x], IsInitialized && LastAddedIndex.Contains(x)))
+            .Select(x => new LogRow(_logs[x], IsInitialized && LastAddedIndex.Contains(x)))
             .UpdateIsError(ErrorTag)
             .MaskRows(Mask)
             .ToArray();
 
-    public LogLine[] this[Range range] =>
+    public LogRow[] this[Range range] =>
         _filteredIndex[range]
-            .Select(x => new LogLine(_logs[x], IsInitialized && LastAddedIndex.Contains(x)))
+            .Select(x => new LogRow(_logs[x], IsInitialized && LastAddedIndex.Contains(x)))
             .UpdateIsError(ErrorTag)
             .MaskRows(Mask)
             .ToArray();
@@ -112,12 +112,12 @@ public class CacheV2
 
 internal static class Extensions
 {
-    public static IEnumerable<LogLine> MaskRows(this IEnumerable<LogLine> actualRows, string mask) =>
+    public static IEnumerable<LogRow> MaskRows(this IEnumerable<LogRow> actualRows, string mask) =>
         string.IsNullOrWhiteSpace(mask)
             ? actualRows
             : actualRows.Select(x => Mask(x, mask));
 
-    private static LogLine Mask(LogLine row, string mask)
+    private static LogRow Mask(LogRow row, string mask)
     {
         var index = row.Text.IndexOf(mask, StringComparison.Ordinal);
         var maskedRow = index < 0
@@ -126,12 +126,12 @@ internal static class Extensions
         return maskedRow;
     }
     
-    public static IEnumerable<LogLine> UpdateIsError(this IEnumerable<LogLine> actualRows, string errorTag) =>
+    public static IEnumerable<LogRow> UpdateIsError(this IEnumerable<LogRow> actualRows, string errorTag) =>
         string.IsNullOrWhiteSpace(errorTag)
             ? actualRows
             : actualRows.Select(x => UpdateIsError(x, errorTag));
 
-    private static LogLine UpdateIsError(LogLine row, string errorTag) =>
+    private static LogRow UpdateIsError(LogRow row, string errorTag) =>
         row.Text.Contains(errorTag, StringComparison.InvariantCultureIgnoreCase)
         ? row with { IsError = true }
         : row;
