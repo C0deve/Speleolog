@@ -36,7 +36,6 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
     public ObservableCollection<string> ErrorMessages { get; } = [];
     public ReactiveCommand<Unit, Unit> OpenFileCommand { get; }
     public ReactiveCommand<Unit, bool> OpenTemplateFolderCommand { get; }
-    public ReactiveCommand<Unit, Unit> ConvertTemplateV1ToV2Command { get; }
     public ReactiveCommand<Unit, Unit> CreateTemplateCommand { get; }
     private ReactiveCommand<string, IReadOnlyList<TemplateInfos>> ReadTemplateFolder { get; }
 
@@ -69,17 +68,6 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         };
 
         _fileChangedObservableFactory = new FileChangedObservableFactory(fileSystemObserverFactory);
-
-        ConvertTemplateV1ToV2Command = ReactiveCommand.CreateFromTask(async () =>
-        {
-            var v1 = new SpeleologTemplateRepository();
-            foreach (var templateInfos in v1.ReadAll(State.TemplateFolder))
-            {
-                var template = await v1.ReadAsync(templateInfos.Path);
-                if(template == null) continue;
-                await _templateRepository.SaveAsync(State.TemplateFolder, template);
-            }
-        });
 
         CreateTemplateCommand = ReactiveCommand.CreateFromTask(() =>
             _templateRepository.SaveAsync(
