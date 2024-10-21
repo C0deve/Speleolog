@@ -21,7 +21,6 @@
             <Menu>
                 <MenuItem Header="_Open">
                     <MenuItem Header="_File" Command="{Binding OpenFileCommand}" />
-                    <Separator />
                     <MenuItem Header="_Template" ItemsSource="{Binding TemplateInfosList}">
                         <MenuItem.ItemTemplate>
                             <DataTemplate>
@@ -32,7 +31,6 @@
                             </DataTemplate>
                         </MenuItem.ItemTemplate>
                     </MenuItem>
-                    <Separator />
                     <MenuItem Header="_Template Folder" Command="{Binding OpenTemplateFolderCommand}" />
                     <Separator />
                     <MenuItem Header="_Create Template from open files" Command="{Binding CreateTemplateCommand}" />

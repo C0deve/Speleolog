@@ -103,6 +103,10 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
             .Select(_ => State.TemplateFolder)
             .InvokeCommand(ReadTemplateFolder)
             .DisposeWith(_disposables);
+        
+        CreateTemplateCommand
+            .InvokeCommand(OpenTemplateFolderCommand)
+            .DisposeWith(_disposables);
     }
 
     public void Drop(object? sender, DragEventArgs e)
