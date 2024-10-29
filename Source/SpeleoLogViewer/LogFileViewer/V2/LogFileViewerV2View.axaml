@@ -57,7 +57,7 @@
         </ScrollViewer>
 
         <!--  ToolBar  -->
-        <Grid ColumnDefinitions="Auto,Auto,Auto,0.45*,0.45*,0.1*" Grid.Row="1">
+        <Grid ColumnDefinitions="Auto,Auto,Auto,0.45*,0.22*,0.22*,0.1*" Grid.Row="1">
             <TextBlock
                 Grid.Column="0"
                 Margin="2"
@@ -96,6 +96,13 @@
                 Watermark="Rechercher" />
             <TextBox
                 Grid.Column="5"
+                Margin="2"
+                Text="{Binding HighlightText}"
+                TextWrapping="Wrap"
+                VerticalAlignment="Center"
+                Watermark="Surligner" />
+            <TextBox
+                Grid.Column="6"
                 Margin="2"
                 Text="{Binding ErrorTag}"
                 TextWrapping="Wrap"

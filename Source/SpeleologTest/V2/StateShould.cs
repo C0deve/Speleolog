@@ -1,4 +1,5 @@
 ﻿using Shouldly;
+using SpeleoLogViewer;
 using SpeleoLogViewer.LogFileViewer.V2;
 
 namespace SpeleologTest.V2;
@@ -11,7 +12,7 @@ public class StateShould
             .Initial(10)
             .Handle(new Refresh("123"))
             .Events
-            .ShouldBe([new AddedToTheTop(0, 0, true, rows: "123")]);
+            .ShouldBe([new AddedToTheBottom(blocs: "123" + Environment.NewLine)]);
 
     [Fact]
     public void ClearEvents() =>
@@ -31,8 +32,9 @@ public class StateShould
             .Handle(new Refresh("4"))
             .Events
             .ShouldBe([
-                new AddedToTheTop(0, 0, true, rows: "123"),
-                new AddedToTheTop(0, 1, true, rows: LogRow.NewLine("4"))
+                new AddedToTheBottom(blocs: "123" + Environment.NewLine),
+                new AddedToTheTop(0, 1, true,
+                    new DisplayBloc("4" + Environment.NewLine, IsJustAdded: true))
             ]);
     }
 
@@ -44,8 +46,14 @@ public class StateShould
             .Handle(new Refresh("4", "5", "6"))
             .Events
             .ShouldBe([
-                new AddedToTheTop(0, 0, true, "1", "2", "3"),
-                new AddedToTheTop(3, 3, true, LogRow.NewLine("4"), LogRow.NewLine("5"), LogRow.NewLine("6")),
+                new AddedToTheBottom(0,
+                    0,
+                    "3" + Environment.NewLine + "2" + Environment.NewLine + "1" + Environment.NewLine),
+                new AddedToTheTop(3,
+                    3,
+                    true,
+                    new DisplayBloc("6" + Environment.NewLine + "5" + Environment.NewLine + "4" + Environment.NewLine,
+                        true)),
             ]);
 
     [Fact]
@@ -53,12 +61,15 @@ public class StateShould
         State
             .Initial(10)
             .Handle(new Refresh("1", "1", "3", "1"))
+            .ClearEvents()
             .Handle(new Filter("1"))
             .Events
             .ShouldBe([
-                new AddedToTheTop(0, 0, true, "1", "1", "3", "1"),
                 IEvent.DeletedAll,
-                new AddedToTheTop(0, 0, true, "1", "1", "1")
+                new AddedToTheBottom(0, 0,
+                    "1" + Environment.NewLine +
+                    "1" + Environment.NewLine +
+                    "1" + Environment.NewLine)
             ]);
 
     [Fact]
@@ -88,13 +99,12 @@ public class StateShould
             .Initial(10)
             .Handle(new Refresh("1", "1", "3", "1"))
             .Handle(new Filter("1"))
+            .ClearEvents()
             .Handle(new Refresh("1"))
             .Events
             .ShouldBe([
-                new AddedToTheTop(0, 0, true, "1", "1", "3", "1"),
-                new DeletedAll(),
-                new AddedToTheTop(0, 0, true, "1", "1", "1"),
-                new AddedToTheTop(0, 3, true, LogRow.NewLine("1"))
+                new AddedToTheTop(0, 3, true,
+                    new DisplayBloc("1" + Environment.NewLine, IsJustAdded: true))
             ]);
 
     [Fact]
@@ -104,15 +114,14 @@ public class StateShould
             .Initial(10)
             .Handle(new Refresh("1", "1", "3", "1"))
             .Handle(new Mask("1"))
+            .ClearEvents()
             .Handle(new Refresh("1"))
             .Events
             .ToArray();
         enumerable
             .ShouldBe([
-                new AddedToTheTop(0, 0, true, "1", "1", "3", "1"),
-                new DeletedAll(),
-                new AddedToTheTop(0, 0, true, "", "", "3", ""),
-                new AddedToTheTop(0, 4, true, LogRow.NewLine(""))
+                new AddedToTheTop(0, 4, true,
+                    new DisplayBloc(Environment.NewLine, IsJustAdded: true))
             ]);
     }
 
@@ -126,7 +135,12 @@ public class StateShould
             .Events
             .ShouldBe([
                 new DeletedAll(),
-                new AddedToTheTop(0, 0, true, "c", "def", "g", " ")
+                new AddedToTheBottom(0,
+                    0,
+                    " " + Environment.NewLine +
+                    "g" + Environment.NewLine +
+                    "def" + Environment.NewLine +
+                    "c" + Environment.NewLine)
             ]);
 
     [Fact]
@@ -147,10 +161,11 @@ public class StateShould
             .Handle(new Refresh(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
             .Events
             .ShouldBe([
-                new AddedToTheTop(isOnTop: true, rows: Enumerable
+                new AddedToTheBottom(blocs: string.Join("", Enumerable
                     .Range(90, 10)
-                    .Select(x => new LogRow($"{x}"))
-                    .ToArray())
+                    .Reverse()
+                    .Select(x => $"{x}" + Environment.NewLine)
+                ))
             ]);
 
     [Fact]
@@ -164,7 +179,7 @@ public class StateShould
             .ToArray()
             .ShouldBe([
                     new DeletedAll(),
-                    new AddedToTheTop(isOnTop: true, rows: Enumerable.Repeat(new LogRow("a"), 10).ToArray())
+                    new AddedToTheBottom(blocs: string.Join("", Enumerable.Repeat("a" + Environment.NewLine, 10)))
                 ]
             );
 
@@ -177,7 +192,12 @@ public class StateShould
             .Handle(new Previous())
             .Events
             .ShouldBe([
-                new AddedToTheBottom(10, 10, [..Enumerable.Range(40, 10).Select(x => $"{x}").Select(s => new LogRow(s))]),
+                new AddedToTheBottom(10,
+                    10,
+                    blocs: string.Join("", Enumerable.Range(40, 10)
+                        .Reverse()
+                        .Select(x => $"{x}" + Environment.NewLine)
+                    )),
             ]);
 
     [Fact]
@@ -190,7 +210,13 @@ public class StateShould
             .Handle(new Next())
             .Events
             .ShouldBe([
-                new AddedToTheTop(removedFromBottomCount: 10, previousPageSize: 10, isOnTop: true, rows: [..Enumerable.Range(90, 10).Select(x => $"{x}")]),
+                new AddedToTheTop(removedFromBottomCount: 10,
+                    previousPageSize: 10,
+                    isOnTop: true,
+                    blocs: string.Join("", Enumerable.Range(90, 10)
+                        .Reverse()
+                        .Select(x => $"{x}" + Environment.NewLine)
+                    ))
             ]);
 
     [Fact]
@@ -228,7 +254,12 @@ public class StateShould
             .Events
             .ShouldBe([
                 new DeletedAll(),
-                new AddedToTheTop(isOnTop: true, rows: [LogRow.Error("1"), LogRow.Error("1"), "3", LogRow.Error("1")])
+                new AddedToTheBottom(blocs:
+                [
+                    new DisplayBloc("1" + Environment.NewLine, IsError: true),
+                    "3" + Environment.NewLine,
+                    new DisplayBloc("1" + Environment.NewLine + "1" + Environment.NewLine, IsError: true),
+                ])
             ]);
 
     [Fact]
@@ -241,4 +272,24 @@ public class StateShould
             .Handle(new SetErrorTag("1"))
             .Events
             .ShouldBeEmpty();
+
+    [Fact]
+    public void Highlight() =>
+        State
+            .Initial(10)
+            .Handle(new Refresh("abc", "def", "abg", "_ab "))
+            .ClearEvents()
+            .Handle(new Highlight("ab"))
+            .Events
+            .ShouldBe([
+                new Updated(
+                    "_",
+                    new DisplayBloc("ab", IsHighlighted: true),
+                    " " + Environment.NewLine,
+                    new DisplayBloc("ab", IsHighlighted: true),
+                    "g" + Environment.NewLine + "def" + Environment.NewLine,
+                    new DisplayBloc("ab", IsHighlighted: true),
+                    "c" + Environment.NewLine
+                )
+            ]);
 }

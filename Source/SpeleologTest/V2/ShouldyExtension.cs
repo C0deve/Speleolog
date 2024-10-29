@@ -1,4 +1,5 @@
 ﻿using Shouldly;
+using SpeleoLogViewer;
 using SpeleoLogViewer.LogFileViewer.V2;
 
 namespace SpeleologTest.V2;
@@ -40,14 +41,16 @@ internal static class ShouldyExtension
                         addedToTheTop.IsOnTop.ShouldBe(theExpected1.IsOnTop);
                         addedToTheTop.RemovedFromBottomCount.ShouldBe(theExpected1.RemovedFromBottomCount);
                         addedToTheTop.PreviousPageSize.ShouldBe(theExpected1.PreviousPageSize);
-                        ShouldBe(addedToTheTop.Rows.ToArray(), theExpected1.Rows.ToArray());
+                        ShouldBe(addedToTheTop.Blocs.ToArray(), theExpected1.Blocs.ToArray());
                         break;
                     case AddedToTheBottom addedToTheBottom:
                         var theExpected2 = (AddedToTheBottom)theExpected;
                         addedToTheBottom.PreviousPageSize.ShouldBe(theExpected2.PreviousPageSize);
-                        ShouldBe(addedToTheBottom.Rows.ToArray(), theExpected2.Rows.ToArray());
+                        ShouldBe(addedToTheBottom.Blocs.ToArray(), theExpected2.Blocs.ToArray());
                         break;
-                    
+                    case Updated updated:
+                        ShouldBe(updated.Blocs.ToArray(), ((Updated)theExpected).Blocs.ToArray());
+                        break;
                     default:
                         actual.ShouldBe(theExpected);
                         break;
@@ -56,7 +59,7 @@ internal static class ShouldyExtension
         });
     }
 
-    private static void ShouldBe(LogRow[] actualLogList, LogRow[] expectedLogList)
+    private static void ShouldBe(DisplayBloc[] actualLogList, DisplayBloc[] expectedLogList)
     {
         for (var i1 = 0; i1 < actualLogList.Length; i1++) 
             actualLogList[i1].ShouldBe(expectedLogList[i1], $"i1 = {i1}");

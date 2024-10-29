@@ -25,6 +25,7 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
     [Reactive] public string Filter { get; set; }
     [Reactive] public string MaskText { get; set; }
     [Reactive] public string ErrorTag { get; set; }
+    [Reactive] public string HighlightText { get; set; }
     [Reactive] public long LoadingDuration { get; private set; }
     [Reactive] public string LogsCountDisplay { get; private set; } = string.Empty;
     public ReactiveCommand<Unit, string[]> Load { get; }
@@ -42,8 +43,7 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
         ErrorTag = errorTag;
         RefreshStream = _refresh.AsObservable().Where(message => message is not Initial);
         var state = State.Initial(lineCountByPage);
-        Filter = string.Empty;
-        MaskText = string.Empty;
+        Filter = MaskText = HighlightText = string.Empty;
         FilePath = filePath;
         Title = Path.GetFileName(FilePath);
         var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
@@ -56,6 +56,7 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
                 this.WhenAnyValue(vm => vm.Filter, filter => new Filter(filter)).Skip(1).Is<ICommand>(),
                 this.WhenAnyValue(vm => vm.MaskText, mask => new Mask(mask)).Skip(1).Is<ICommand>(),
                 this.WhenAnyValue(vm => vm.ErrorTag, tag => new SetErrorTag(tag)).Skip(1).Is<ICommand>(),
+                this.WhenAnyValue(vm => vm.HighlightText, text => new Highlight(text)).Skip(1).Is<ICommand>(),
                 Load.Select(text => new Refresh(text)).Is<ICommand>()
             )
             .SelectMany(command =>

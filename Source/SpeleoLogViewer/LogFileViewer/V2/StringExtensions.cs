@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using DynamicData;
 
 namespace SpeleoLogViewer.LogFileViewer.V2;
 
@@ -72,14 +74,55 @@ public static class StringExtensions
         var index = givenString.GetIndexOfNthLineFromEnd(nthRow);
         return new LineResult(givenString[..index.Index], index.LineCount);
     }
-    
-    public static IEnumerable<int> AllIndexOf(this string text, string str, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
+
+    public static IEnumerable<Range> AllIndexOf(this string text, string str, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
     {
+        if (string.IsNullOrEmpty(str)) yield break;
+
         var index = text.IndexOf(str, comparisonType);
-        while(index != -1)
+        if (index == -1)
         {
-            yield return index;
+            yield return ..text.Length;
+            yield break;
+        }
+
+        while (index != -1)
+        {
+            yield return index..(index + str.Length);
             index = text.IndexOf(str, index + 1, comparisonType);
         }
     }
+
+    public static HighLightText[] Cut(this string text, string highLight) => string.IsNullOrEmpty(highLight)
+        ? [new HighLightText(text)]
+        : text
+            .AllIndexOf(highLight, StringComparison.OrdinalIgnoreCase)
+            .Aggregate(
+                new List<Range>(),
+                (list, range) =>
+                {
+                    var unLightStart = list.LastOrDefault().End;
+                    var unLightEnd = range.Start;
+                    if (unLightEnd.Value > unLightStart.Value)
+                        list.Add(unLightStart..unLightEnd);
+
+                    list.Add(range);
+
+                    return list;
+                },
+                list =>
+                {
+                    var index = list.Last().End;
+                    if (index.Value < text.Length)
+                        list.Add(index..text.Length);
+                    return list;
+                })
+            .Select(range =>
+            {
+                var s = text[range];
+                return new HighLightText(s, s.Equals(highLight, StringComparison.InvariantCulture));
+            })
+            .ToArray();
 }
+
+public record HighLightText(string Text, bool IsHighlighted = false);

@@ -85,7 +85,6 @@ public class PageRangeShould
             new object[] { 0, 10, 5, 10, new[] { 10, 11, 12, 13, 14 }, new[] { 0, 1, 2, 3, 4 } },
             new object[] { 3, 3, 4, 3, new[] { 6 }, new[] { 3 } },
             new object[] { 3, 3, 4, 6, new[] { 6, 7, 8, 9 }, new[] { 3 } },
-            new object[] { 0, 0, 4, 3, new[] { 4, 5, 6 }, Array.Empty<int>() },
         };
 
     [Theory, MemberData(nameof(DataCompareLesserThan))]
@@ -104,5 +103,6 @@ public class PageRangeShould
         {
             new object[] { 5, 10, 0, 10, new[] { 0, 1, 2, 3, 4 }, new[] { 10, 11, 12, 13, 14 } },
             new object[] { 4, 3, 3, 3, new[] { 3 }, new[] { 6 } },
+            new object[] { 0, 0, 4, 3, new[] { 4, 5, 6 }, Array.Empty<int>() },
         };
 }

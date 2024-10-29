@@ -78,17 +78,26 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
         switch (message)
         {
             case DeletedAll:
-                _logFileContent?.Inlines?.Clear();
+                _logFileContent.Inlines?.Clear();
                 break;
             case AddedToTheBottom toTheBottom:
-                foreach (var run in Map(toTheBottom.Rows))
+                foreach (var run in toTheBottom.Blocs.Select(MapToRun))
                     _logFileContent.Inlines?.Add(run);
                 DeleteLines(_logFileContent, toTheBottom.RemovedFromTopCount, toTheBottom.PreviousPageSize, _scrollViewer);
                 break;
             case AddedToTheTop toTheTop:
-                foreach (var run in Map(toTheTop.Rows, true))
-                    PushToTop(run);
-                DeleteLines(_logFileContent, toTheTop.RemovedFromBottomCount, toTheTop.PreviousPageSize, toTheTop.IsOnTop ? null : _scrollViewer, true);
+                foreach (var run in toTheTop.Blocs.Reverse().Select(MapToRun))
+                    _logFileContent.Inlines?.Insert(0, run);
+                DeleteLines(_logFileContent,
+                    toTheTop.RemovedFromBottomCount,
+                    toTheTop.PreviousPageSize,
+                    toTheTop.IsOnTop ? null : _scrollViewer,
+                    true);
+                break;
+            case Updated updated:
+                _logFileContent.Inlines?.Clear();
+                foreach (var run in updated.Blocs.Select(MapToRun))
+                    _logFileContent.Inlines?.Add(run);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(message));
@@ -159,59 +168,22 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
         scrollViewer.SetCurrentValue(ScrollViewer.OffsetProperty, scrollViewer.Offset + new Vector(0, offsetDelta));
     }
 
-    private IEnumerable<Run> Map(IEnumerable<LogRow> groups, bool reverse = false) =>
-        groups.AggregateLog().SelectMany(group => MapToRun(group, reverse));
-
-    private IEnumerable<Run> MapToRun(LogGroup group, bool reverse)
+    private Run MapToRun(DisplayBloc displayBloc)
     {
-        var rows = group
-            .Rows
-            .Reverse()
-            .Select(s => s + Environment.NewLine);
+        var run = new Run(displayBloc.Text);
 
-        var concat = string.Concat(rows);
+        if (displayBloc.IsError)
+            run.Classes.Add("Error");
 
-        var runs = concat.Contains("10")
-            ? BindHighlightRun(concat, "10", reverse)
-            : [new Run(concat)];
-
-        foreach (var run in runs)
+        if (displayBloc.IsJustAdded)
         {
-            if (group.Key.IsError)
-                run.Classes.Add("Error");
-
-            if (group.Key.IsNewLine)
-            {
-                run.Classes.Add("JustAdded");
-                AddTimerToRemoveClass(run);
-            }
-
-            yield return run;
+            run.Classes.Add("JustAdded");
+            AddTimerToRemoveClass(run);
         }
-    }
 
-    private IEnumerable<Run> BindHighlightRun(string concat, string highlight, bool reverse)
-    {
-        var unLightList = concat.Split(highlight);
-        if (reverse) unLightList = unLightList.Reverse().ToArray();
-
-        return unLightList.Aggregate(new List<Run>(), (runs, unLight) =>
-        {
-            if (!string.IsNullOrEmpty(unLight))
-                runs.Add(new Run(unLight));
-            var highlightRun = new Run(highlight);
-            highlightRun.Classes.Add("HighLight");
-            runs.Add(highlightRun);
-
-            return runs;
-        }, runs => runs.SkipLast(1));
-    }
-
-    private void PushToTop(Run inline)
-    {
-        _logFileContent?
-            .Inlines?
-            .Insert(0, inline);
+        if (displayBloc.IsHighlighted)
+            run.Classes.Add("HighLight");
+        return run;
     }
 
     private void AddTimerToRemoveClass(Run inline) =>
@@ -239,13 +211,16 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
         switch (message)
         {
             case AddedToTheBottom addToBottom:
-                Console.WriteLine($"addToBottom {addToBottom.Rows.Count}");
+                Console.WriteLine($"addToBottom {addToBottom.Blocs.Count} bloc(s)");
                 break;
             case AddedToTheTop addToTop:
-                Console.WriteLine($"addToTop {addToTop.Rows.Count}");
+                Console.WriteLine($"addToTop {addToTop.Blocs.Count} bloc(s)");
                 break;
             case DeletedAll:
                 Console.WriteLine("delete all");
+                break;
+            case Updated updated:
+                Console.WriteLine($"update current page {updated.Blocs.Count} bloc(s)");
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(message));

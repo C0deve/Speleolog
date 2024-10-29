@@ -9,24 +9,24 @@ public interface IEvent
     public static IEvent DeletedAll => new DeletedAll();
 }
 
-public class EventBase(params LogRow[] rows) : ValueObject, IEvent
+public class EventBase(params DisplayBloc[] blocs) : ValueObject, IEvent
 {
-    public IReadOnlyCollection<LogRow> Rows { get; } = rows.ToArray().AsReadOnly();
+    public IReadOnlyCollection<DisplayBloc> Blocs { get; } = blocs.ToArray().AsReadOnly();
 
     protected override IEnumerable<object> GetEqualityComponents()
     {
-        if (Rows.Count == 0)
+        if (Blocs.Count == 0)
         {
             yield return 0;
             yield break;
         }
 
-        foreach (var row in Rows)
+        foreach (var row in Blocs)
             yield return row;
     }
 }
 
-public class AddedToTheTop(int removedFromBottomCount = 0, int previousPageSize = 0, bool isOnTop = false, params LogRow[] rows) : EventBase(rows)
+public class AddedToTheTop(int removedFromBottomCount = 0, int previousPageSize = 0, bool isOnTop = false, params DisplayBloc[] blocs) : EventBase(blocs)
 {
     public int RemovedFromBottomCount { get; } = removedFromBottomCount;
     public int PreviousPageSize { get; } = previousPageSize;
@@ -42,7 +42,7 @@ public class AddedToTheTop(int removedFromBottomCount = 0, int previousPageSize 
     }
 }
 
-public class AddedToTheBottom(int removedFromTopCount = 0, int previousPageSize = 0, params LogRow[] rows) : EventBase(rows)
+public class AddedToTheBottom(int removedFromTopCount = 0, int previousPageSize = 0, params DisplayBloc[] blocs) : EventBase(blocs)
 {
     public int RemovedFromTopCount { get; } = removedFromTopCount;
     public int PreviousPageSize { get; } = previousPageSize;
@@ -59,3 +59,10 @@ public class AddedToTheBottom(int removedFromTopCount = 0, int previousPageSize 
 public record DeletedAll : IEvent;
 
 public record Initial : IEvent;
+
+public record Updated : IEvent
+{
+    public Updated(params DisplayBloc[] blocs) => Blocs = blocs.ToArray().AsReadOnly();
+
+    public IReadOnlyCollection<DisplayBloc> Blocs { get; }
+}

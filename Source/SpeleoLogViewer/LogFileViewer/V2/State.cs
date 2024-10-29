@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace SpeleoLogViewer.LogFileViewer.V2;
@@ -10,6 +11,7 @@ public class State : ValueObject
     private PageRange _actualPage = PageRange.Empty;
     private readonly CacheV2 _cache = new();
     private readonly EndToStartPaginatorV2 _paginator;
+    private string _highlight = string.Empty;
 
     public IEvent[] Events => _events.ToArray();
     public int TotalLogsCount => _cache.TotalLogsCount;
@@ -49,11 +51,22 @@ public class State : ValueObject
             case SetErrorTag setErrorTag:
                 DoSetErrorTag(setErrorTag);
                 break;
+            case Highlight highlight:
+                DoHighlight(highlight);
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(command));
         }
 
         return this;
+    }
+
+    private void DoHighlight(Highlight command)
+    {
+        if (command.HighlightText == _highlight) return;
+        _highlight = command.HighlightText;
+        var blocs = BuildBlocs(_actualPage[..]);
+        _events.Add(new Updated(blocs));
     }
 
     private void DoSetErrorTag(SetErrorTag setErrorTag)
@@ -119,7 +132,7 @@ public class State : ValueObject
     private IEvent[] RefreshDisplayedRows()
     {
         var newPage = _paginator.ActualPage;
-        var evts = _actualPage.Compare(newPage) switch
+        var events = _actualPage.Compare(newPage) switch
         {
             IsGoneBackward isGoneBackward => Map(isGoneBackward),
             IsGoneForward isGoneForward => Map(isGoneForward),
@@ -127,21 +140,46 @@ public class State : ValueObject
             _ => throw new ArgumentOutOfRangeException()
         };
         _actualPage = newPage;
-        return evts.ToArray();
+        return events.ToArray();
     }
 
     private IEnumerable<IEvent> Map(IsGoneForward isGoneForward)
     {
-        var logRows = _cache[isGoneForward.AddedFomTop].ToArray();
+        var logRows = BuildBlocs(isGoneForward.AddedFomTop);
         if (logRows.Length != 0)
-            yield return new AddedToTheTop(isGoneForward.DeleteFromBottom.Length, isGoneForward.PageSize, _paginator.IsOnLastPage, logRows);
+            yield return new AddedToTheTop(isGoneForward.DeleteFromBottom.Length,
+                isGoneForward.PageSize,
+                _paginator.IsOnLastPage,
+                logRows);
     }
 
     private IEnumerable<IEvent> Map(IsGoneBackward isGoneBackward)
     {
-        var logRows = _cache[isGoneBackward.AddedFomBottom].ToArray();
+        var logRows = BuildBlocs(isGoneBackward.AddedFomBottom);
         if (logRows.Length != 0)
             yield return new AddedToTheBottom(isGoneBackward.DeleteFromTop.Length, isGoneBackward.PageSize, logRows);
+    }
+
+    private DisplayBloc[] BuildBlocs(int[] range) =>
+        _cache[range]
+            .Reverse()
+            .Select(row => row.SplitHighlightBloc(_highlight))
+            .SelectMany(GetBlocs)
+            .Group()
+            .ToArray();
+
+    private static IEnumerable<DisplayBloc> GetBlocs(DisplayRow row)
+    {
+        DisplayBloc? last = null;
+        foreach (var displayBloc in row.Blocs)
+        {
+            last = displayBloc;
+            yield return displayBloc;
+        }
+
+        yield return last is null
+            ? new DisplayBloc(Environment.NewLine)
+            : last with { Text = Environment.NewLine };
     }
 
     protected override IEnumerable<object> GetEqualityComponents()

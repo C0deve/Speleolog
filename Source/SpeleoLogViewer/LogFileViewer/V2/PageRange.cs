@@ -41,7 +41,7 @@ public record PageRange : IEnumerable<int>
             throw new ArgumentException($"Cannot compare range with a smaller size ({incomingRange.Size}). Actual size: {Size}");
 
         if (IsEmpty)
-            return new IsGoneForward([], incomingRange[..], Size);
+            return new IsGoneBackward([], incomingRange[..], Size);
 
         if (incomingRange.Start == Start && incomingRange.End == End)
             return new IsUnchanged();
