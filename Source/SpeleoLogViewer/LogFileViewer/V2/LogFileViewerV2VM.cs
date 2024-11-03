@@ -50,6 +50,8 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
 
         Load = ReactiveCommand.CreateFromTask(() => LoadFileContentAsync(filePath, textFileLoader));
 
+        var sequencer = new Sequencer<IEvent[]>(Console.WriteLine);
+
         Observable.Merge(
                 NextPage.Is<ICommand>(),
                 PreviousPage.Is<ICommand>(),
@@ -59,15 +61,22 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
                 this.WhenAnyValue(vm => vm.HighlightText, text => new Highlight(text)).Skip(1).Is<ICommand>(),
                 Load.Select(text => new Refresh(text)).Is<ICommand>()
             )
-            .SelectMany(command =>
+            .Do(command => sequencer.Enqueue(() =>
             {
                 state.Handle(command);
                 var newEvents = state.Events;
                 state.ClearEvents();
-                LogsCountDisplay = state.IsSearchOn ? $"{state.FilteredLogsCount} / {state.TotalLogsCount}"
+                LogsCountDisplay = state.IsSearchOn
+                    ? $"{state.FilteredLogsCount} / {state.TotalLogsCount}"
                     : state.TotalLogsCount.ToString();
                 return newEvents;
-            })
+            }))
+            .Subscribe()
+            .DisposeWith(_disposable);
+
+        sequencer
+            .Output
+            .SelectMany(x => x)
             .Log(this)
             .Subscribe(_refresh)
             .DisposeWith(_disposable);
