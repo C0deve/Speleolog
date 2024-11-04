@@ -19,10 +19,10 @@ public static class Extensions
         row.Text
             .Cut(highlight)
             .Select(bloc => new DisplayBloc(
-                bloc.Text,
+                row.Text[bloc.Range],
                 row.IsNewLine,
                 row.IsError,
-                bloc.IsHighlighted))
+                bloc.IsHighLight))
             .ToDisplayRow();
 
     private static DisplayRow ToDisplayRow(this IEnumerable<DisplayBloc> blocs) => new(blocs.ToArray());

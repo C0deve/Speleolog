@@ -94,14 +94,13 @@ public static class StringExtensions
         }
     }
 
-    public static HighLightText[] Cut(this string text, string highLight) => 
+    public static HighLightRange[] Cut(this string text, string highLight) => 
         string.IsNullOrEmpty(highLight) 
-            ? [new HighLightText(text)] 
-            : text.CutPipeline(highLight).ToArray();
+            ? [new HighLightRange(..text.Length)] 
+            : text.CutPipeline(highLight);
 
-    private record HighLightRange(Range Range, bool IsHighLight = false);
 
-    private static IEnumerable<HighLightText> CutPipeline(this string text, string highLight) =>
+    private static HighLightRange[] CutPipeline(this string text, string highLight) =>
         text
             .AllIndexOf(highLight, StringComparison.OrdinalIgnoreCase)
             .Aggregate(
@@ -123,9 +122,8 @@ public static class StringExtensions
                     var index = list.Last().Range.End;
                     if (index.Value < text.Length)
                         list.Add(new HighLightRange(Range: index..text.Length));
-                    return list;
-                })
-            .Select(x => new HighLightText(text[x.Range], x.IsHighLight));
+                    return list.ToArray();
+                });
 }
 
-public record HighLightText(string Text, bool IsHighlighted = false);
+public record HighLightRange(Range Range, bool IsHighLight = false);

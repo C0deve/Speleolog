@@ -10,8 +10,8 @@ public class StringExtensionShould
         "Hello World"
             .Cut("Hello")
             .ShouldBe([
-                new HighLightText("Hello", true),
-                new HighLightText(" World")
+                new HighLightRange(..5, true),
+                new HighLightRange(5..11)
             ]);
 
     [Fact]
@@ -19,9 +19,9 @@ public class StringExtensionShould
         "World Hello World"
             .Cut("Hello")
             .ShouldBe([
-                new HighLightText("World "),
-                new HighLightText("Hello", true),
-                new HighLightText(" World")
+                new HighLightRange(..6),
+                new HighLightRange(6..11, true),
+                new HighLightRange(11..17)
             ]);
 
     [Fact]
@@ -29,8 +29,8 @@ public class StringExtensionShould
         "Hello World"
             .Cut("World")
             .ShouldBe([
-                new HighLightText("Hello "),
-                new HighLightText("World", true),
+                new HighLightRange(..6),
+                new HighLightRange(6..11, true),
             ]);
     
     [Fact]
@@ -38,8 +38,8 @@ public class StringExtensionShould
         "111"
             .Cut("11")
             .ShouldBe([
-                new HighLightText("11", true),
-                new HighLightText("1"),
+                new HighLightRange(..2, true),
+                new HighLightRange(2..3),
             ]);
     
     [Fact]
@@ -47,7 +47,7 @@ public class StringExtensionShould
         "000"
             .Cut("11")
             .ShouldBe([
-                new HighLightText("000"),
+                new HighLightRange(..3),
             ]);
     
     [Fact]
