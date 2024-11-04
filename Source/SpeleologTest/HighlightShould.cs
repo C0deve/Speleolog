@@ -4,14 +4,14 @@ using SpeleoLogViewer.LogFileViewer.V2;
 
 namespace SpeleologTest;
 
-public class SplitHighlightBlocShould
+public class HighlightShould
 {
     [Theory]
     [InlineData(true, false),
      InlineData(false, true),
      InlineData(true, true),
      InlineData(false, false)]
-    public void SplitOneBlocNoHighlight(bool isNewLine, bool isError) =>
+    public void SplitOneBlocIfNoMatch(bool isNewLine, bool isError) =>
         new LogRow("bla bla bla", IsNewLine: isNewLine, IsError: isError)
             .SplitHighlightBloc("hey")
             .Blocs
@@ -58,5 +58,15 @@ public class SplitHighlightBlocShould
                 new DisplayBloc("bla"),
                 new DisplayBloc("hey", IsHighlighted: true),
                 new DisplayBloc("bla")
+            ]);
+    
+    [Fact]
+    public void Split4() =>
+        new LogRow("111")
+            .SplitHighlightBloc("11")
+            .Blocs
+            .ShouldBe([
+                new DisplayBloc("11", IsHighlighted: true),
+                new DisplayBloc("1")
             ]);
 }

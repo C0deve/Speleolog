@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using DynamicData;
 
 namespace SpeleoLogViewer.LogFileViewer.V2;
 
@@ -75,54 +74,58 @@ public static class StringExtensions
         return new LineResult(givenString[..index.Index], index.LineCount);
     }
 
+    /// <summary>
+    /// Returns all ranges of <paramref name="str"/> in <paramref name="text" />
+    /// </summary>
+    /// <param name="text"></param>
+    /// <param name="str"></param>
+    /// <param name="comparisonType"></param>
+    /// <returns></returns>
     public static IEnumerable<Range> AllIndexOf(this string text, string str, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
     {
         if (string.IsNullOrEmpty(str)) yield break;
 
         var index = text.IndexOf(str, comparisonType);
-        if (index == -1)
-        {
-            yield return ..text.Length;
-            yield break;
-        }
-
         while (index != -1)
         {
-            yield return index..(index + str.Length);
-            index = text.IndexOf(str, index + 1, comparisonType);
+            var end = index + str.Length;
+            yield return index..end;
+            index = text.IndexOf(str, end, comparisonType);
         }
     }
 
-    public static HighLightText[] Cut(this string text, string highLight) => string.IsNullOrEmpty(highLight)
-        ? [new HighLightText(text)]
-        : text
+    public static HighLightText[] Cut(this string text, string highLight) => 
+        string.IsNullOrEmpty(highLight) 
+            ? [new HighLightText(text)] 
+            : text.CutPipeline(highLight).ToArray();
+
+    private record HighLightRange(Range Range, bool IsHighLight = false);
+
+    private static IEnumerable<HighLightText> CutPipeline(this string text, string highLight) =>
+        text
             .AllIndexOf(highLight, StringComparison.OrdinalIgnoreCase)
             .Aggregate(
-                new List<Range>(),
+                new List<HighLightRange>(),
                 (list, range) =>
                 {
-                    var unLightStart = list.LastOrDefault().End;
+                    var unLightStart = list.LastOrDefault()?.Range.End ?? 0;
                     var unLightEnd = range.Start;
                     if (unLightEnd.Value > unLightStart.Value)
-                        list.Add(unLightStart..unLightEnd);
+                        list.Add(new HighLightRange(Range: unLightStart..unLightEnd));
 
-                    list.Add(range);
+                    list.Add(new HighLightRange(Range: range, IsHighLight: true));
 
                     return list;
                 },
                 list =>
                 {
-                    var index = list.Last().End;
+                    if (list.Count == 0) return [new HighLightRange(Range: ..text.Length)];
+                    var index = list.Last().Range.End;
                     if (index.Value < text.Length)
-                        list.Add(index..text.Length);
+                        list.Add(new HighLightRange(Range: index..text.Length));
                     return list;
                 })
-            .Select(range =>
-            {
-                var s = text[range];
-                return new HighLightText(s, s.Equals(highLight, StringComparison.InvariantCulture));
-            })
-            .ToArray();
+            .Select(x => new HighLightText(text[x.Range], x.IsHighLight));
 }
 
 public record HighLightText(string Text, bool IsHighlighted = false);

@@ -7,8 +7,7 @@ namespace SpeleologTest;
 public class GroupShould
 {
     [Fact]
-    public void Group()
-    {
+    public void Group() =>
         new List<string> { "Hello world", "Bye world bye", "World Bye Bye" }
             .Select(s => s + Environment.NewLine)
             .Select(s => new List<DisplayBloc> { new(s) })
@@ -17,11 +16,9 @@ public class GroupShould
             .ShouldBe([
                 new DisplayBloc("Hello world" + Environment.NewLine + "Bye world bye" + Environment.NewLine + "World Bye Bye" + Environment.NewLine),
             ]);
-    }
 
     [Fact]
-    public void GroupHighlighted()
-    {
+    public void GroupHighlighted() =>
         new List<string> { "Hello world", "Bye world bye", "World Bye Bye" }
             .Select(s => s + Environment.NewLine)
             .Select(s => new LogRow(s))
@@ -33,9 +30,10 @@ public class GroupShould
                 new DisplayBloc("world", IsHighlighted: true),
                 new DisplayBloc(Environment.NewLine + "Bye "),
                 new DisplayBloc("world", IsHighlighted: true),
-                new DisplayBloc(" bye" + Environment.NewLine + "World Bye Bye" + Environment.NewLine)
+                new DisplayBloc(" bye" + Environment.NewLine),
+                new DisplayBloc("World", IsHighlighted: true),
+                new DisplayBloc(" Bye Bye" + Environment.NewLine),
             ]);
-    }
 
     [Fact]
     public void GroupDisplayBlocs() =>

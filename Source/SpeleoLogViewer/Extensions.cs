@@ -18,11 +18,11 @@ public static class Extensions
     public static DisplayRow SplitHighlightBloc(this LogRow row, string highlight) =>
         row.Text
             .Cut(highlight)
-            .Select(highLightedText => new DisplayBloc(
-                highLightedText.Text,
+            .Select(bloc => new DisplayBloc(
+                bloc.Text,
                 row.IsNewLine,
                 row.IsError,
-                highLightedText.IsHighlighted))
+                bloc.IsHighlighted))
             .ToDisplayRow();
 
     private static DisplayRow ToDisplayRow(this IEnumerable<DisplayBloc> blocs) => new(blocs.ToArray());
