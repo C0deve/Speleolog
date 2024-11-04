@@ -61,6 +61,7 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
                 this.WhenAnyValue(vm => vm.HighlightText, text => new Highlight(text)).Skip(1).Is<ICommand>(),
                 Load.Select(text => new Refresh(text)).Is<ICommand>()
             )
+            .ObserveOn(taskpoolScheduler)
             .Do(command => sequencer.Enqueue(() =>
             {
                 state.Handle(command);
