@@ -67,7 +67,7 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
     private IDisposable? SubscribeToRefresh() =>
         ViewModel?
             .RefreshStream
-            .Do(message => Dispatcher.UIThread.Post(() => Handle(message)))
+            .Do(message => Dispatcher.UIThread.Post(() => Handle(message), DispatcherPriority.Render))
             .Subscribe(_ => { }, ex => Console.WriteLine(ex.Message));
 
     private void Handle(IEvent message)
