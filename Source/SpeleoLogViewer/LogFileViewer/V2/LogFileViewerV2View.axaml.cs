@@ -23,6 +23,7 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
     private IDisposable? _refreshAllSubscription;
     private ScrollViewer? _scrollViewer;
     private SelectableTextBlock? _logFileContent;
+    private bool _autoScroll;
 
     public LogFileViewerV2View() => InitializeComponent();
 
@@ -37,21 +38,23 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
                 .ScrollChanged
                 //.Do(args => Console.WriteLine($"ExtentDelta :{args.ExtentDelta.Y}, OffsetDelta :{args.OffsetDelta.Y}, ViewportDelta :{args.ViewportDelta.Y}"))
                 .ObserveOn(RxApp.MainThreadScheduler)
+                .Select(args => (args, autoScroll: _autoScroll) )
+                .Do(_ => _autoScroll = false)
                 .Publish();
 
             observable
-                .Where(x => x.OffsetDelta.Y > 0)
+                .Where(x => x.args.OffsetDelta.Y > 0)
                 //.Do(eventArgs => Console.WriteLine($"ScrollToBottom: {eventArgs.OffsetDelta.Y}"))
-                .Where(args => IsScrollToBottom((ScrollViewer)args.Source!))
+                .Where(x => !x.autoScroll && IsScrollToBottom((ScrollViewer)x.args.Source!))
                 .Select(_ => Unit.Default)
                 .Log(this)
                 .InvokeCommand(this, view => view.ViewModel!.PreviousPage)
                 .DisposeWith(disposable);
 
             observable
-                .Where(args => args.OffsetDelta.Y < 0)
+                .Where(x => x.args.OffsetDelta.Y < 0)
                 //.Do(eventArgs => Console.WriteLine($"ScrollToTop: {eventArgs.OffsetDelta.Y}"))
-                .Where(args => IsScrollToTop((ScrollViewer)args.Source!))
+                .Where(x => !x.autoScroll && IsScrollToTop((ScrollViewer)x.args.Source!))
                 .Select(_ => Unit.Default)
                 .Log(this)
                 .InvokeCommand(this, view => view.ViewModel!.NextPage)
@@ -104,7 +107,7 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
         }
     }
 
-    private static void DeleteLines(SelectableTextBlock selectableTextBlock, int lineToDeleteCount, int previousPageSize, ScrollViewer? scrollViewer, bool isFromBottom = false)
+    private void DeleteLines(SelectableTextBlock selectableTextBlock, int lineToDeleteCount, int previousPageSize, ScrollViewer? scrollViewer, bool isFromBottom = false)
     {
         if (lineToDeleteCount == 0) return;
         if (selectableTextBlock.Inlines is null || selectableTextBlock.Inlines.Count == 0) return;
@@ -148,21 +151,22 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
             var result = remove(run.Text, lineToDeleteCount);
             lineToDeleteCount -= result.LineCount;
 
-            Debug.WriteLine($"Delete from bottom: found {result.LineCount} rows in last run");
+            // Debug.WriteLine($"Delete from bottom: found {result.LineCount} rows in last run");
             if (result.Text.Length == 0)
             {
                 yield return run;
                 continue;
             }
 
-            Debug.WriteLine($"delete {result.LineCount} rows from bottom, Length {run.Text.Length} => {result.Text.Length}");
+            // Debug.WriteLine($"delete {result.LineCount} rows from bottom, Length {run.Text.Length} => {result.Text.Length}");
             run.Text = result.Text;
         }
     }
 
-    private static void AdjustScroll(int count, int previousPageSize, ScrollViewer? scrollViewer)
+    private void AdjustScroll(int count, int previousPageSize, ScrollViewer? scrollViewer)
     {
         if (scrollViewer is null) return;
+        _autoScroll = true;
         var offsetDelta = scrollViewer.Extent.Height * (1.0 * count / previousPageSize); // proportion of removed
         // Console.WriteLine($"{scrollViewer.Offset.Y} => {scrollViewer.Offset.Y - offsetDelta}");
         scrollViewer.SetCurrentValue(ScrollViewer.OffsetProperty, scrollViewer.Offset + new Vector(0, offsetDelta));
