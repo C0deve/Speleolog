@@ -107,6 +107,8 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         CreateTemplateCommand
             .InvokeCommand(OpenTemplateFolderCommand)
             .DisposeWith(_disposables);
+        
+        SetupCommand(CreateTemplateCommand, OpenTemplateFolderCommand, ReadTemplateFolder, OpenFileCommand);
     }
 
     public void Drop(object? sender, DragEventArgs e)
@@ -202,4 +204,12 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         e.DragEffects = DragDropEffects.None;
         e.Handled = true;
     }
+    
+    private void SetupCommand(params IReactiveCommand[] commands) =>
+        commands
+            .Select(command => command.ThrownExceptions)
+            .Merge()
+            .Do(exception => ErrorMessages.Add(exception.Message))
+            .Subscribe()
+            .DisposeWith(_disposables);
 }
