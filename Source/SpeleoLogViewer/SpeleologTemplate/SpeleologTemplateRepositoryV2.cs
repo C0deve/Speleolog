@@ -40,6 +40,7 @@ public class SpeleologTemplateRepositoryV2 : ISpeleologTemplateRepositoryV2
     
     public async Task SaveAsync(string folderPath, SpeleologTemplate speleologTemplate, CancellationToken token = default)
     {
+        if(!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
         var filePath = Path.Combine(folderPath, $"{speleologTemplate.Name}.v2{Extension}");
         await File.WriteAllLinesAsync(filePath, speleologTemplate.Files, token);
     }
