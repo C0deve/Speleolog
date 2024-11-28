@@ -29,6 +29,7 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
     [Reactive] public long LoadingDuration { get; private set; }
     [Reactive] public string LogsCountDisplay { get; private set; } = string.Empty;
     public ReactiveCommand<Unit, string[]> Load { get; }
+    public ReactiveCommand<Unit, Unit> GoToTop { get; }
     public ReactiveCommand<Unit, ICommand> PreviousPage { get; } = ReactiveCommand.Create<Unit, ICommand>(_ => new Previous());
     public ReactiveCommand<Unit, ICommand> NextPage { get; } = ReactiveCommand.Create<Unit, ICommand>(_ => new Next());
 
@@ -49,17 +50,18 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
         var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
 
         Load = ReactiveCommand.CreateFromTask(() => LoadFileContentAsync(filePath, textFileLoader));
-
+        GoToTop = ReactiveCommand.Create(() => { });
         var sequencer = new Sequencer<IEvent[]>(Console.WriteLine);
 
         Observable.Merge(
                 NextPage.Is<ICommand>(),
                 PreviousPage.Is<ICommand>(),
-                this.WhenAnyValue(vm => vm.Filter, filter => new Filter(filter)).Throttle(TimeSpan.FromMilliseconds(500), taskpoolScheduler).Skip(1).Is<ICommand>(),
-                this.WhenAnyValue(vm => vm.MaskText, mask => new Mask(mask)).Skip(1).Throttle(TimeSpan.FromMilliseconds(500), taskpoolScheduler).Is<ICommand>(),
-                this.WhenAnyValue(vm => vm.ErrorTag, tag => new SetErrorTag(tag)).Skip(1).Throttle(TimeSpan.FromMilliseconds(500), taskpoolScheduler).Is<ICommand>(),
-                this.WhenAnyValue(vm => vm.HighlightText, text => new Highlight(text)).Skip(1).Throttle(TimeSpan.FromMilliseconds(500), taskpoolScheduler).Is<ICommand>(),
-                Load.Select(text => new Refresh(text)).Is<ICommand>()
+                this.WhenAnyValue(vm => vm.Filter, filter => new Filter(filter)).Throttle(_throttleTime, taskpoolScheduler).Skip(1).Is<ICommand>(),
+                this.WhenAnyValue(vm => vm.MaskText, mask => new Mask(mask)).Skip(1).Throttle(_throttleTime, taskpoolScheduler).Is<ICommand>(),
+                this.WhenAnyValue(vm => vm.ErrorTag, tag => new SetErrorTag(tag)).Skip(1).Throttle(_throttleTime, taskpoolScheduler).Is<ICommand>(),
+                this.WhenAnyValue(vm => vm.HighlightText, text => new Highlight(text)).Skip(1).Throttle(_throttleTime, taskpoolScheduler).Is<ICommand>(),
+                Load.Select(text => new Refresh(text)).Is<ICommand>(),
+                GoToTop.Select(_ => new GoToTop()).Is<ICommand>()
             )
             .ObserveOn(taskpoolScheduler)
             .Do(command => sequencer.Enqueue(() =>

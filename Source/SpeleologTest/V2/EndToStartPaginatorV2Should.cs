@@ -3,7 +3,7 @@ using SpeleoLogViewer.LogFileViewer.V2;
 
 namespace SpeleologTest.V2;
 
-public class EntToStartPaginatorV2Should
+public class EndToStartPaginatorV2Should
 {
     [Fact]
     public void ReturnEmptyOnCreation() =>

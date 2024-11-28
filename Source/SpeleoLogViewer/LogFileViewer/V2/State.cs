@@ -42,6 +42,9 @@ public class State : ValueObject
             case Next:
                 GoNext();
                 break;
+            case GoToTop:
+                DoGoToTop();
+                break;
             case Previous:
                 GoPrevious();
                 break;
@@ -90,6 +93,8 @@ public class State : ValueObject
         _paginator.Move(50);
         _events.AddRange(RefreshDisplayedRows());
     }
+    
+    private void DoGoToTop() => ResetDisplayedRows();
 
     private void DoMask(Mask mask)
     {

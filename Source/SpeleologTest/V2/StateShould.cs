@@ -218,6 +218,24 @@ public class StateShould
                         .Select(x => $"{x}" + Environment.NewLine)
                     ))
             ]);
+ [Fact]
+    public void GoTop() =>
+        State
+            .Initial(10)
+            .Handle(new Refresh(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
+            .Handle(new Previous())
+            .ClearEvents()
+            .Handle(new GoToTop())
+            .Events
+            .ShouldBe([
+                new DeletedAll(),
+                new AddedToTheBottom(removedFromTopCount: 0,
+                    previousPageSize: 0,
+                    blocs: string.Join("", Enumerable.Range(90, 10)
+                        .Reverse()
+                        .Select(x => $"{x}" + Environment.NewLine)
+                    ))
+            ]);
 
     [Fact]
     public void GoNextOnLastPage() =>
