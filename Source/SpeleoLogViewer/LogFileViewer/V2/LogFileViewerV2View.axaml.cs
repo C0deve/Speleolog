@@ -76,35 +76,63 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
     private void Handle(IEvent message)
     {
         Log(message);
-        if (_logFileContent is null) return;
-
         switch (message)
         {
             case DeletedAll:
-                _logFileContent.Inlines?.Clear();
+                DeleteAll();
                 break;
             case AddedToTheBottom toTheBottom:
-                foreach (var run in toTheBottom.Blocs.Select(MapToRun))
-                    _logFileContent.Inlines?.Add(run);
-                DeleteLines(_logFileContent, toTheBottom.RemovedFromTopCount, toTheBottom.PreviousPageSize, _scrollViewer);
+                AddToBottom(toTheBottom);
                 break;
             case AddedToTheTop toTheTop:
-                foreach (var run in toTheTop.Blocs.Reverse().Select(MapToRun))
-                    _logFileContent.Inlines?.Insert(0, run);
-                DeleteLines(_logFileContent,
-                    toTheTop.RemovedFromBottomCount,
-                    toTheTop.PreviousPageSize,
-                    toTheTop.IsOnTop ? null : _scrollViewer,
-                    true);
+                AddToTop(toTheTop);
                 break;
             case Updated updated:
-                _logFileContent.Inlines?.Clear();
-                foreach (var run in updated.Blocs.Select(MapToRun))
-                    _logFileContent.Inlines?.Add(run);
+                Update(updated);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(message));
         }
+    }
+
+    private void Update(Updated updated)
+    {
+        if (_logFileContent is null) return;
+
+        _logFileContent.Inlines?.Clear();
+        foreach (var run in updated.Blocs.Select(MapToRun))
+            _logFileContent.Inlines?.Add(run);
+    }
+
+    private void DeleteAll()
+    {
+        if (_logFileContent is null) return;
+
+        _logFileContent.Inlines?.Clear();
+        _autoScroll = true;
+        _scrollViewer?.ScrollToHome();
+    }
+
+    private void AddToBottom(AddedToTheBottom toTheBottom)
+    {
+        if (_logFileContent is null) return;
+
+        foreach (var run in toTheBottom.Blocs.Select(MapToRun))
+            _logFileContent.Inlines?.Add(run);
+        DeleteLines(_logFileContent, toTheBottom.RemovedFromTopCount, toTheBottom.PreviousPageSize, _scrollViewer);
+    }
+
+    private void AddToTop(AddedToTheTop toTheTop)
+    {
+        if (_logFileContent is null) return;
+
+        foreach (var run in toTheTop.Blocs.Reverse().Select(MapToRun))
+            _logFileContent.Inlines?.Insert(0, run);
+        DeleteLines(_logFileContent,
+            toTheTop.RemovedFromBottomCount,
+            toTheTop.PreviousPageSize,
+            toTheTop.IsOnTop ? null : _scrollViewer,
+            true);
     }
 
     private void DeleteLines(SelectableTextBlock selectableTextBlock, int lineToDeleteCount, int previousPageSize, ScrollViewer? scrollViewer, bool isFromBottom = false)
