@@ -16,7 +16,7 @@ public class Sequencer<TOutput>(Action<Exception>? onException = null)
     public IObservable<TOutput> Output => _output.AsObservable();
     public Task WaitAll() => Task.WhenAll(_tasks.Values);
 
-    public void Enqueue(Func<TOutput> action)
+    public Sequencer<TOutput> Enqueue(Func<TOutput> action)
     {
         var id = Guid.NewGuid();
         var task = Task.Run(() =>
@@ -39,5 +39,7 @@ public class Sequencer<TOutput>(Action<Exception>? onException = null)
         });
 
         _tasks.TryAdd(id, task);
+
+        return this;
     }
 }

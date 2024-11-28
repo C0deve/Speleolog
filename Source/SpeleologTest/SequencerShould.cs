@@ -47,9 +47,10 @@ public class SequencerShould
     [Fact]
     public async Task HandleException()
     {
-        var sut = Sequencer();
-        sut.Enqueue(DoWithException);
-        sut.Enqueue(Do);
+        var sut =
+            Sequencer()
+                .Enqueue(DoWithException)
+                .Enqueue(Do);
 
         await sut.WaitAll();
         _messages.ShouldBe(["Something went wrong", "Hello"]);
