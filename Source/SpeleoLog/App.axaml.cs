@@ -1,11 +1,7 @@
-using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Markup.Xaml;
-using SpeleoLog.ApplicationState;
-using SpeleoLog.FileChanged;
-using SpeleoLog.LogFileViewer.V2;
+using SpeleoLog._Infrastructure;
 using SpeleoLog.Main;
-using SpeleoLog.SpeleologTemplate;
+using FileSystemWatcher = SpeleoLog._Infrastructure.FileSystemWatcher;
 using MainWindow = SpeleoLog.Main.MainWindow;
 
 namespace SpeleoLog;
@@ -32,7 +28,7 @@ public class App : Application
                 lastState, 
                 new SchedulerProvider(), 
                 new SpeleologTemplateRepositoryV2(),
-                () => new TextFileLoaderV2());
+                () => new FileLoader());
             
             desktop.MainWindow.Closing += (_, _) =>
             {
@@ -48,7 +44,7 @@ public class App : Application
         base.OnFrameworkInitializationCompleted();
     }
     
-    private static FileSystemChangedWatcher FileSystemWatcherFactory(string directoryPath) =>
+    private static FileSystemWatcher FileSystemWatcherFactory(string directoryPath) =>
         new(directoryPath);
 
 }

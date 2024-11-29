@@ -1,5 +1,5 @@
 ﻿using Shouldly;
-using SpeleoLog.FileChanged;
+using FileSystemWatcher = SpeleoLog._Infrastructure.FileSystemWatcher;
 
 namespace SpeleoLog.Test;
 
@@ -10,7 +10,7 @@ public class FileSystemChangedWatcherShould
     {
         var isInvoked = false;
         var filePath = Utils.CreateUniqueEmptyFile();
-        var sut = new FileSystemChangedWatcher(Path.GetDirectoryName(filePath)!);
+        var sut = new FileSystemWatcher(Path.GetDirectoryName(filePath)!);
         sut.Changed += (_, _) =>
         {
             isInvoked = true;

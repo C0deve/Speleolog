@@ -1,6 +1,4 @@
-﻿using Avalonia.Input;
-
-namespace SpeleoLog._BaseClass;
+﻿namespace SpeleoLog._BaseClass;
 
 public interface IDropTarget
 {

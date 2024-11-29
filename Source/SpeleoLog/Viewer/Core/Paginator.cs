@@ -1,6 +1,6 @@
-﻿namespace SpeleoLog.LogFileViewer.V2;
+﻿namespace SpeleoLog.Viewer.Core;
 
-public class EndToStartPaginatorV2(int pageSize)
+public class Paginator(int pageSize)
 {
     private int _itemCount;
     private int LastIndex => Math.Max(0, _itemCount - 1);
@@ -15,14 +15,14 @@ public class EndToStartPaginatorV2(int pageSize)
     /// </summary>
     /// <param name="itemCount"></param>
     /// <returns></returns>
-    public EndToStartPaginatorV2 Reset(int itemCount)
+    public Paginator Reset(int itemCount)
     {
         _itemCount = itemCount;
         GoToLastPage();
         return this;
     }
 
-    public EndToStartPaginatorV2 Move(int stepSize) =>
+    public Paginator Move(int stepSize) =>
         stepSize switch
         {
             > 0 => Next(stepSize),
@@ -30,7 +30,7 @@ public class EndToStartPaginatorV2(int pageSize)
             0 => this,
         };
 
-    private EndToStartPaginatorV2 Next(int stepSize)
+    private Paginator Next(int stepSize)
     {
         if (!CanGoNext) return this;
 
@@ -41,7 +41,7 @@ public class EndToStartPaginatorV2(int pageSize)
         return this;
     }
 
-    private EndToStartPaginatorV2 Previous(int stepSize)
+    private Paginator Previous(int stepSize)
     {
         if (!CanGoPrevious) return this;
 
@@ -51,7 +51,7 @@ public class EndToStartPaginatorV2(int pageSize)
         return this;
     }
 
-    public EndToStartPaginatorV2 Push(int itemCount)
+    public Paginator Push(int itemCount)
     {
         var wasOnLastPage = IsOnLastPage;
         _itemCount += itemCount;

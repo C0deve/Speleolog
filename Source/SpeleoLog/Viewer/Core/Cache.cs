@@ -1,6 +1,6 @@
-﻿namespace SpeleoLog.LogFileViewer.V2;
+﻿namespace SpeleoLog.Viewer.Core;
 
-public class CacheV2
+public class Cache
 {
     private readonly List<string> _logs = [];
     private readonly List<int> _filteredIndex = [];
@@ -13,9 +13,9 @@ public class CacheV2
     public int TotalLogsCount => _logs.Count;
     public string Mask { get; private set; } = string.Empty;
     public string SearchTerm { get; private set; } = string.Empty;
-    public string ErrorTag { get; private set; } = string.Empty;
+    public string ErrorTag { get; set; } = string.Empty;
 
-    public CacheV2 SetSearchTerm(string text)
+    public Cache SetSearchTerm(string text)
     {
         SearchTerm = text;
         _filteredIndex.Clear();
@@ -23,35 +23,29 @@ public class CacheV2
         return this;
     }
 
-    public CacheV2 SetMask(string mask)
+    public Cache SetMask(string mask)
     {
         Mask = mask;
         return this;
     }
     
-    public CacheV2 SetErrorTag(string errorTag)
-    {
-        ErrorTag = errorTag;
-        return this;
-    }
-
-    public LogRow[] this[IEnumerable<int> range] =>
+    public Row[] this[IEnumerable<int> range] =>
         range
             .Where(i => i < _filteredIndex.Count)
             .Select(i => _filteredIndex[i])
-            .Select(x => new LogRow(_logs[x], IsInitialized && LastAddedIndex.Contains(x)))
-            .UpdateIsError(ErrorTag)
+            .Select(x => new Row(_logs[x], IsInitialized && LastAddedIndex.Contains(x)))
+            .SetIsError(ErrorTag)
             .MaskRows(Mask)
             .ToArray();
 
-    public LogRow[] this[Range range] =>
+    public Row[] this[Range range] =>
         _filteredIndex[range]
-            .Select(x => new LogRow(_logs[x], IsInitialized && LastAddedIndex.Contains(x)))
-            .UpdateIsError(ErrorTag)
+            .Select(x => new Row(_logs[x], IsInitialized && LastAddedIndex.Contains(x)))
+            .SetIsError(ErrorTag)
             .MaskRows(Mask)
             .ToArray();
     
-    public CacheV2 Push(params string[] input)
+    public Cache Push(params string[] input)
     {
         LastAddedIndex.Clear();
         Add(input);
@@ -104,31 +98,4 @@ public class CacheV2
         row.Contains(search, StringComparison.InvariantCultureIgnoreCase);
 
     public void ClearLastAdded() => LastAddedIndex.Clear();
-}
-
-internal static class Extensions
-{
-    public static IEnumerable<LogRow> MaskRows(this IEnumerable<LogRow> actualRows, string mask) =>
-        string.IsNullOrWhiteSpace(mask)
-            ? actualRows
-            : actualRows.Select(x => Mask(x, mask));
-
-    private static LogRow Mask(LogRow row, string mask)
-    {
-        var index = row.Text.IndexOf(mask, StringComparison.Ordinal);
-        var maskedRow = index < 0
-            ? row
-            : row with { Text = row.Text.Remove(index, mask.Length) };
-        return maskedRow;
-    }
-    
-    public static IEnumerable<LogRow> UpdateIsError(this IEnumerable<LogRow> actualRows, string errorTag) =>
-        string.IsNullOrWhiteSpace(errorTag)
-            ? actualRows
-            : actualRows.Select(x => UpdateIsError(x, errorTag));
-
-    private static LogRow UpdateIsError(LogRow row, string errorTag) =>
-        row.Text.Contains(errorTag, StringComparison.InvariantCultureIgnoreCase)
-        ? row with { IsError = true }
-        : row;
 }

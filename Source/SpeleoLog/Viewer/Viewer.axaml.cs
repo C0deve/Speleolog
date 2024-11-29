@@ -1,19 +1,11 @@
-﻿using System.Reactive;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.Documents;
-using Avalonia.Markup.Xaml;
-using Avalonia.ReactiveUI;
+﻿using Avalonia.Controls.Documents;
 using Avalonia.Threading;
 using ReactiveMarbles.ObservableEvents;
-using ReactiveUI;
 using Splat;
 
-namespace SpeleoLog.LogFileViewer.V2;
+namespace SpeleoLog.Viewer;
 
-public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM>, IEnableLogger
+public partial class Viewer : ReactiveUserControl<ViewerVM>, IEnableLogger
 {
     private const double ScrollDelta = 100;
     private IDisposable? _refreshAllSubscription;
@@ -21,14 +13,14 @@ public partial class LogFileViewerV2View : ReactiveUserControl<LogFileViewerV2VM
     private SelectableTextBlock? _logFileContent;
     private bool _autoScroll;
 
-    public LogFileViewerV2View() => InitializeComponent();
+    public Viewer() => InitializeComponent();
 
     private void InitializeComponent()
     {
         this.WhenActivated(disposable =>
         {
-            _logFileContent ??= this.FindControl<SelectableTextBlock>("LogContent") ?? throw new InvalidOperationException("LogFileViewerV2View is not yet loaded.");
-            _scrollViewer ??= this.FindControl<ScrollViewer>("ScrollViewer") ?? throw new InvalidOperationException("LogFileViewerV2View is not yet loaded.");
+            _logFileContent ??= this.FindControl<SelectableTextBlock>("LogContent") ?? throw new InvalidOperationException("Viewer is not yet loaded.");
+            _scrollViewer ??= this.FindControl<ScrollViewer>("ScrollViewer") ?? throw new InvalidOperationException("Viewer is not yet loaded.");
 
             var observable = _scrollViewer.Events()
                 .ScrollChanged

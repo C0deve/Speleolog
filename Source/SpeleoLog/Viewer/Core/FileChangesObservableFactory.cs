@@ -1,40 +1,44 @@
-﻿using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Linq;
+﻿namespace SpeleoLog.Viewer.Core;
 
-namespace SpeleoLog.FileChanged;
-
-public class FileChangedObservableFactory(Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory)
+public class FileChangesObservableFactory(Func<string, IFileSystemWatcher> fileSystemObserverFactory)
 {
-    private readonly Dictionary<string, IObservable<FileSystemEventArgs>> _dictionary = [];
+    private readonly Dictionary<string, IObservable<FileSystemEventArgs>> _observablesByFolderCache = [];
     public static readonly TimeSpan ThrottleDuration = TimeSpan.FromMilliseconds(500);
 
-    public IObservable<Unit> BuildFileChangedObservable(
+    public IObservable<Unit> Build(
         string filePath,
         IScheduler? scheduler = null)
     {
-        var directoryPath = Path.GetDirectoryName(filePath) ?? throw new InvalidOperationException($"Impossible de trouver le repertoir du fichier {filePath}");
+        ArgumentNullException.ThrowIfNull(filePath);
+        var directoryPath = Path.GetDirectoryName(filePath) ?? throw new InvalidOperationException($"Null parent directory. File: {filePath}");
         var fileName = Path.GetFileName(filePath);
 
         var taskpoolScheduler = scheduler ?? Scheduler.Default;
-        return GetOrCreateDirectoryChangedObservable(directoryPath, taskpoolScheduler)
+        return GetObservableDirectory(directoryPath, taskpoolScheduler)
                 .Where(args => string.Equals(args.Name, fileName, StringComparison.InvariantCultureIgnoreCase))
                 .Select(_ => Unit.Default);
     }
 
-    private IObservable<FileSystemEventArgs> GetOrCreateDirectoryChangedObservable(string directoryPath, IScheduler scheduler)
+    /// <summary>
+    /// Return an hot observable of all files changes for the given directory path.
+    /// </summary>
+    /// <remarks>Create the observable only if the given folder (or it's parent) is not observed.</remarks>
+    /// <param name="directoryPath"></param>
+    /// <param name="scheduler"></param>
+    /// <returns></returns>
+    private IObservable<FileSystemEventArgs> GetObservableDirectory(string directoryPath, IScheduler scheduler)
     {
-        var key = _dictionary.Keys.FirstOrDefault(directoryPath.Contains);
+        var key = _observablesByFolderCache.Keys.FirstOrDefault(directoryPath.StartsWith);
 
         if (key is null)
-            _dictionary.Add(directoryPath, ObserveFolder(directoryPath, fileSystemObserverFactory, scheduler));
+            _observablesByFolderCache.Add(directoryPath, ObserveFolder(directoryPath, fileSystemObserverFactory, scheduler));
 
-        return _dictionary[key ?? directoryPath];
+        return _observablesByFolderCache[key ?? directoryPath];
     }
 
     private static IObservable<FileSystemEventArgs> ObserveFolder(
         string folderPath,
-        Func<string, IFileSystemChangedWatcher> fileSystemWatcherFactory,
+        Func<string, IFileSystemWatcher> fileSystemWatcherFactory,
         IScheduler scheduler) =>
         // Observable.Defer enables us to avoid doing any work
         // until we have a subscriber.

@@ -5,10 +5,11 @@ using Dock.Model.ReactiveUI.Controls;
 using Microsoft.Reactive.Testing;
 using NSubstitute;
 using Shouldly;
+using SpeleoLog._BaseClass;
 using SpeleoLog.ApplicationState;
-using SpeleoLog.FileChanged;
 using SpeleoLog.Main;
 using SpeleoLog.SpeleologTemplate;
+using SpeleoLog.Viewer.Core;
 
 namespace SpeleoLog.Test;
 
@@ -26,11 +27,11 @@ public class MainViewModelShould
         using var sut = new MainWindowVM(
             storageProvider, 
             Substitute.For<ILauncher>(), 
-            _ => Substitute.For<IFileSystemChangedWatcher>(),
+            _ => Substitute.For<IFileSystemWatcher>(),
             SpeleologState.Default, 
             new SchedulerProvider(), 
             Substitute.For<ISpeleologTemplateRepositoryV2>(),
-            () => new TextFileLoaderV2ForTest("log content"));
+            () => new FileLoaderForTest("log content"));
 
         sut.OpenFileCommand.Execute().Subscribe();
 
@@ -50,11 +51,11 @@ public class MainViewModelShould
         using var sut = new MainWindowVM(
             storageProvider, 
             Substitute.For<ILauncher>(), 
-            _ => Substitute.For<IFileSystemChangedWatcher>(),
+            _ => Substitute.For<IFileSystemWatcher>(),
             SpeleologState.Default,
             new SchedulerProvider(),
             Substitute.For<ISpeleologTemplateRepositoryV2>(),
-            () => new TextFileLoaderV2ForTest("log content"));
+            () => new FileLoaderForTest("log content"));
         sut.OpenFileCommand.Execute().Subscribe();
         var documentDock = ((DocumentDock)sut.Layout.ActiveDockable!).ActiveDockable!;
 
@@ -76,11 +77,11 @@ public class MainViewModelShould
         using var sut = new MainWindowVM(
             storageProvider,
             Substitute.For<ILauncher>(),
-            _ => Substitute.For<IFileSystemChangedWatcher>(),
+            _ => Substitute.For<IFileSystemWatcher>(),
             SpeleologState.Default, 
             new SchedulerProvider(), 
             new SpeleologTemplateRepositoryV2(),
-            () => new TextFileLoaderV2ForTest("log content"));
+            () => new FileLoaderForTest("log content"));
 
         await sut.OpenFileCommand.Execute();
         sut.State.LastOpenFiles.Count.ShouldBe(1);
@@ -99,11 +100,11 @@ public class MainViewModelShould
         using var sut = new MainWindowVM(
             storageProvider,
             Substitute.For<ILauncher>(),
-            _ => Substitute.For<IFileSystemChangedWatcher>(),
+            _ => Substitute.For<IFileSystemWatcher>(),
             SpeleologState.Default, 
             new SchedulerProvider(), 
             Substitute.For<ISpeleologTemplateRepositoryV2>(),
-            () => new TextFileLoaderV2ForTest("log content"));
+            () => new FileLoaderForTest("log content"));
 
         sut.OpenFileCommand.Execute().Subscribe();
         sut.OpenFileCommand.Execute().Subscribe();  
@@ -126,11 +127,11 @@ public class MainViewModelShould
         using var sut = new MainWindowVM(
             storageProvider, 
             Substitute.For<ILauncher>(),
-            _ => Substitute.For<IFileSystemChangedWatcher>(),
+            _ => Substitute.For<IFileSystemWatcher>(),
             new SpeleologState(["c:\\test.txt"], false, "Folder"), 
             new TestSchedulerProvider(scheduler), 
             Substitute.For<ISpeleologTemplateRepositoryV2>(),
-            () => new TextFileLoaderV2ForTest("log content"));
+            () => new FileLoaderForTest("log content"));
         
         scheduler.AdvanceBy(10000);
         sut.State.ShouldSatisfyAllConditions(x =>

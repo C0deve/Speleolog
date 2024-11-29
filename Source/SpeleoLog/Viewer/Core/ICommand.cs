@@ -1,4 +1,4 @@
-﻿namespace SpeleoLog.LogFileViewer.V2;
+﻿namespace SpeleoLog.Viewer.Core;
 
 public interface ICommand;
 public record Refresh(params string[] Text) : ICommand;

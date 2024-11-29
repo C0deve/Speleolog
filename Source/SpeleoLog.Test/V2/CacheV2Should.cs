@@ -1,5 +1,5 @@
 ﻿using Shouldly;
-using SpeleoLog.LogFileViewer.V2;
+using SpeleoLog.Viewer.Core;
 
 namespace SpeleoLog.Test.V2;
 
@@ -7,9 +7,9 @@ public class CacheV2Should
 {
     private readonly string[] _input = ["a", "b"];
 
-    private CacheV2 InitCache(params string[] input)
+    private Cache InitCache(params string[] input)
     {
-        var cache = new CacheV2();
+        var cache = new Cache();
         cache.Push(input.Length > 0 ? input : _input);
         return cache;
     }
@@ -23,14 +23,14 @@ public class CacheV2Should
 
     [Fact]
     public void NotBeInitializedOnFirstRefresh() =>
-        new CacheV2()
+        new Cache()
             .Push("")
             .IsInitialized
             .ShouldBeFalse();
 
     [Fact]
     public void BeInitializedOnSecondRefresh() =>
-        new CacheV2()
+        new Cache()
             .Push("")
             .Push("")
             .IsInitialized
@@ -39,7 +39,7 @@ public class CacheV2Should
     [Fact]
     public void GetLastAddedOnThirdRefresh()
     {
-        new CacheV2()
+        new Cache()
             .Push("a", "b")
             .Push("d")
             .Push("e")
@@ -73,13 +73,13 @@ public class CacheV2Should
     public void ReturnFilteredRows() =>
         InitCache("a", "b", "a")
             .SetSearchTerm("a")[Enumerable.Range(0, 2)]
-            .ShouldBe([new LogRow("a"), new LogRow("a")]);
+            .ShouldBe([new Row("a"), new Row("a")]);
 
     [Fact]
     public void Mask() =>
         InitCache("aa", "ab", "aaab")
             .SetMask("a")[..]
-            .ShouldBe([new LogRow("a"), new LogRow("b"), new LogRow("aab")]);
+            .ShouldBe([new Row("a"), new Row("b"), new Row("aab")]);
 
     [Fact]
     public void ReturnFilteredRowsIfNoMatch() =>
@@ -91,7 +91,7 @@ public class CacheV2Should
     public void ReturnFilteredRowsIfIndexOutOfRange() =>
         InitCache("a", "b", "c")
             .SetSearchTerm("a")[Enumerable.Range(0, 10)]
-            .ShouldBe([new LogRow("a")]);
+            .ShouldBe([new Row("a")]);
 
     [Fact]
     public void ReturnFilteredRowsIfIndexOutOfRange2() =>

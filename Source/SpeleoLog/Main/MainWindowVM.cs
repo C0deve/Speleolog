@@ -1,17 +1,6 @@
 ﻿using System.Collections.ObjectModel;
-using System.Reactive;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using Avalonia.Input;
 using Avalonia.Platform.Storage;
-using Dock.Model.Controls;
-using Dock.Model.Core;
-using ReactiveUI;
-using SpeleoLog._BaseClass;
-using SpeleoLog.ApplicationState;
-using SpeleoLog.FileChanged;
-using SpeleoLog.LogFileViewer.V2;
-using SpeleoLog.SpeleologTemplate;
+using SpeleoLog.Viewer;
 
 namespace SpeleoLog.Main;
 
@@ -22,9 +11,9 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
     private readonly IStorageProvider _storageProvider;
     private readonly ISchedulerProvider _schedulerProvider;
     private readonly ISpeleologTemplateRepositoryV2 _templateRepository;
-    private readonly DockFactory _factory;
-    private readonly FileChangedObservableFactory _fileChangedObservableFactory;
-    private readonly Func<ITextFileLoaderV2> _fileReaderFactory;
+    private readonly DockFactory _dockFactory;
+    private readonly FileChangesObservableFactory _fileChangesObservableFactory;
+    private readonly Func<IFileLoader> _fileReaderFactory;
 
     public IRootDock Layout { get; }
     public ObservableCollection<string> ErrorMessages { get; } = [];
@@ -39,29 +28,29 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
 
     public MainWindowVM(IStorageProvider storageProvider,
         ILauncher launcher,
-        Func<string, IFileSystemChangedWatcher> fileSystemObserverFactory,
+        Func<string, IFileSystemWatcher> fileSystemObserverFactory,
         SpeleologState state,
         ISchedulerProvider schedulerProvider,
         ISpeleologTemplateRepositoryV2 templateRepository,
-        Func<ITextFileLoaderV2> fileReaderFactory)
+        Func<IFileLoader> fileReaderFactory)
     {
         _storageProvider = storageProvider;
         _schedulerProvider = schedulerProvider;
         _templateRepository = templateRepository;
         _fileReaderFactory = fileReaderFactory;
-        _factory = new DockFactory();
+        _dockFactory = new DockFactory();
         State = state with { LastOpenFiles = [] };
-        Layout = _factory.CreateLayout();
-        _factory.InitLayout(Layout);
-        _factory.DockableClosed += (_, args) =>
+        Layout = _dockFactory.CreateLayout();
+        _dockFactory.InitLayout(Layout);
+        _dockFactory.DockableClosed += (_, args) =>
         {
-            if (args.Dockable is not LogFileViewerV2VM logViewModel) return;
+            if (args.Dockable is not ViewerVM logViewModel) return;
 
             State.LastOpenFiles.Remove(logViewModel.FilePath);
             logViewModel.Dispose();
         };
 
-        _fileChangedObservableFactory = new FileChangedObservableFactory(fileSystemObserverFactory);
+        _fileChangesObservableFactory = new FileChangesObservableFactory(fileSystemObserverFactory);
 
         CreateTemplateCommand = ReactiveCommand.CreateFromTask(() =>
             _templateRepository.SaveAsync(
@@ -162,27 +151,27 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
         if (State.LastOpenFiles.Any(s => s == filePath)) return;
 
         State.LastOpenFiles.Add(filePath);
-        AddToDock(CreateLogViewModel(filePath));
+        AddToDock(CreateViewerVM(filePath));
     }
 
-    private LogFileViewerV2VM CreateLogViewModel(string path) =>
+    private ViewerVM CreateViewerVM(string path) =>
         new(
             filePath: path,
-            fileChangedStream: _fileChangedObservableFactory.BuildFileChangedObservable(path, _schedulerProvider.TaskpoolScheduler),
+            fileChangedStream: _fileChangesObservableFactory.Build(path, _schedulerProvider.TaskpoolScheduler),
             _fileReaderFactory(),
             100,
             "error",
-            RxApp.TaskpoolScheduler);
+            _schedulerProvider.TaskpoolScheduler);
 
 
     private void AddToDock(IDockable logViewModel)
     {
-        var files = _factory.GetDockable<IDocumentDock>("Files");
+        var files = _dockFactory.GetDockable<IDocumentDock>("Files");
         if (files is null) return;
 
-        _factory.AddDockable(files, logViewModel);
-        _factory.SetActiveDockable(logViewModel);
-        _factory.SetFocusedDockable(Layout, logViewModel);
+        _dockFactory.AddDockable(files, logViewModel);
+        _dockFactory.SetActiveDockable(logViewModel);
+        _dockFactory.SetFocusedDockable(Layout, logViewModel);
     }
 
     public void CloseLayout()

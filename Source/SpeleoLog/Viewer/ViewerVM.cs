@@ -1,16 +1,9 @@
 ﻿using System.Diagnostics;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using Dock.Model.ReactiveUI.Controls;
-using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
 
-namespace SpeleoLog.LogFileViewer.V2;
+namespace SpeleoLog.Viewer;
 
-public sealed class LogFileViewerV2VM : Document, IDisposable
+public sealed class ViewerVM : Document, IDisposable
 {
     private readonly CompositeDisposable _disposable = new();
     private readonly BehaviorSubject<IEvent> _refresh = new(IEvent.Initial);
@@ -29,10 +22,10 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
     public ReactiveCommand<Unit, ICommand> PreviousPage { get; } = ReactiveCommand.Create<Unit, ICommand>(_ => new Previous());
     public ReactiveCommand<Unit, ICommand> NextPage { get; } = ReactiveCommand.Create<Unit, ICommand>(_ => new Next());
 
-    public LogFileViewerV2VM(
+    public ViewerVM(
         string filePath,
         IObservable<Unit> fileChangedStream,
-        ITextFileLoaderV2 textFileLoader,
+        IFileLoader fileLoader,
         int lineCountByPage,
         string errorTag,
         IScheduler? scheduler = null)
@@ -45,7 +38,7 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
         Title = Path.GetFileName(FilePath);
         var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
 
-        Load = ReactiveCommand.CreateFromTask(() => LoadFileContentAsync(filePath, textFileLoader));
+        Load = ReactiveCommand.CreateFromTask(() => LoadFileContentAsync(filePath, fileLoader));
         GoToTop = ReactiveCommand.Create(() => { });
         var sequencer = new Sequencer<IEvent[]>(Console.WriteLine);
 
@@ -88,14 +81,13 @@ public sealed class LogFileViewerV2VM : Document, IDisposable
         Load.Execute().Subscribe();
     }
 
-    private async Task<string[]> LoadFileContentAsync(string filePath, ITextFileLoaderV2 textFileLoader)
+    private async Task<string[]> LoadFileContentAsync(string filePath, IFileLoader fileLoader)
     {
-        //ActivitySource.StartActivity("LoadFileContentAsync");
-        using var watcher = new Watcher("File loading");
         var watch = Stopwatch.StartNew();
-        var textAsync = await textFileLoader.GetTextAsync(filePath, CancellationToken.None);
+        var textAsync = await fileLoader.GetTextAsync(filePath, CancellationToken.None);
         watch.Stop();
         LoadingDuration = watch.ElapsedMilliseconds;
+        Debug.WriteLine($"File loading {watch.ElapsedMilliseconds}ms");
         return textAsync;
     }
 

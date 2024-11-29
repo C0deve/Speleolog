@@ -1,6 +1,4 @@
-using Avalonia.Controls;
 using Avalonia.Controls.Templates;
-using Dock.Model.Core;
 
 namespace SpeleoLog;
 
@@ -9,8 +7,7 @@ public class ViewLocator : IDataTemplate
     public Control Build(object? data)
     {
         var name = data?.GetType().FullName?
-            .Replace("ViewModel", "View")
-            .Replace("VM", "View");
+            .Replace("VM", "");
         if (name is null)
             return new TextBlock { Text = "Invalid Data Type" };
         
@@ -23,7 +20,6 @@ public class ViewLocator : IDataTemplate
             return (Control)instance;
 
         return new TextBlock { Text = "Create Instance Failed: " + type.FullName };
-
     }
 
     public bool Match(object? data) => data is IDockable;

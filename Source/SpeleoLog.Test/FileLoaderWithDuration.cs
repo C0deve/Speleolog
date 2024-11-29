@@ -1,8 +1,8 @@
-﻿using SpeleoLog.LogFileViewer.V2;
+﻿using SpeleoLog.Viewer.Core;
 
 namespace SpeleoLog.Test;
 
-public class TextFileLoaderV2WithDuration(TimeSpan loadingDuration) : ITextFileLoaderV2
+public class FileLoaderWithDuration(TimeSpan loadingDuration) : IFileLoader
 {
     public async Task<string[]> GetTextAsync(string filePath, CancellationToken cancellationToken)
     {

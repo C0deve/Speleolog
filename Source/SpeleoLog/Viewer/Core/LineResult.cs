@@ -1,3 +1,3 @@
-﻿namespace SpeleoLog.LogFileViewer.V2;
+﻿namespace SpeleoLog.Viewer.Core;
 
 public record LineResult(string Text, int LineCount);

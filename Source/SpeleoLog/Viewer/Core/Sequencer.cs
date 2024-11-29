@@ -1,8 +1,6 @@
 ﻿using System.Collections.Concurrent;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
 
-namespace SpeleoLog.LogFileViewer;
+namespace SpeleoLog.Viewer.Core;
 
 public class Sequencer<TOutput>(Action<Exception>? onException = null)
 {

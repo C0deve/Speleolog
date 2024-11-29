@@ -1,5 +1,5 @@
 ﻿using Shouldly;
-using SpeleoLog.LogFileViewer.V2;
+using SpeleoLog.Viewer.Core;
 
 namespace SpeleoLog.Test.V2;
 
@@ -11,7 +11,7 @@ public class StateShould
             .Initial(10)
             .Handle(new Refresh("123"))
             .Events
-            .ShouldBe([new AddedToTheBottom(blocs: "123" + Environment.NewLine)]);
+            .ShouldBe([new AddedToTheBottom(Blocs: "123" + Environment.NewLine)]);
 
     [Fact]
     public void ClearEvents() =>
@@ -31,7 +31,7 @@ public class StateShould
             .Handle(new Refresh("4"))
             .Events
             .ShouldBe([
-                new AddedToTheBottom(blocs: "123" + Environment.NewLine),
+                new AddedToTheBottom(Blocs: "123" + Environment.NewLine),
                 new AddedToTheTop(0, 1, true,
                     new DisplayBloc("4" + Environment.NewLine, IsJustAdded: true))
             ]);
@@ -160,7 +160,7 @@ public class StateShould
             .Handle(new Refresh(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
             .Events
             .ShouldBe([
-                new AddedToTheBottom(blocs: string.Join("", Enumerable
+                new AddedToTheBottom(Blocs: string.Join("", Enumerable
                     .Range(90, 10)
                     .Reverse()
                     .Select(x => $"{x}" + Environment.NewLine)
@@ -178,7 +178,7 @@ public class StateShould
             .ToArray()
             .ShouldBe([
                     new DeletedAll(),
-                    new AddedToTheBottom(blocs: string.Join("", Enumerable.Repeat("a" + Environment.NewLine, 10)))
+                    new AddedToTheBottom(Blocs: string.Join("", Enumerable.Repeat("a" + Environment.NewLine, 10)))
                 ]
             );
 
@@ -193,7 +193,7 @@ public class StateShould
             .ShouldBe([
                 new AddedToTheBottom(10,
                     10,
-                    blocs: string.Join("", Enumerable.Range(40, 10)
+                    Blocs: string.Join("", Enumerable.Range(40, 10)
                         .Reverse()
                         .Select(x => $"{x}" + Environment.NewLine)
                     )),
@@ -209,10 +209,10 @@ public class StateShould
             .Handle(new Next())
             .Events
             .ShouldBe([
-                new AddedToTheTop(removedFromBottomCount: 10,
-                    previousPageSize: 10,
-                    isOnTop: true,
-                    blocs: string.Join("", Enumerable.Range(90, 10)
+                new AddedToTheTop(RemovedFromBottomCount: 10,
+                    PreviousPageSize: 10,
+                    IsOnTop: true,
+                    Blocs: string.Join("", Enumerable.Range(90, 10)
                         .Reverse()
                         .Select(x => $"{x}" + Environment.NewLine)
                     ))
@@ -228,9 +228,9 @@ public class StateShould
             .Events
             .ShouldBe([
                 new DeletedAll(),
-                new AddedToTheBottom(removedFromTopCount: 0,
-                    previousPageSize: 0,
-                    blocs: string.Join("", Enumerable.Range(90, 10)
+                new AddedToTheBottom(RemovedFromTopCount: 0,
+                    PreviousPageSize: 0,
+                    Blocs: string.Join("", Enumerable.Range(90, 10)
                         .Reverse()
                         .Select(x => $"{x}" + Environment.NewLine)
                     ))
@@ -271,7 +271,7 @@ public class StateShould
             .Events
             .ShouldBe([
                 new DeletedAll(),
-                new AddedToTheBottom(blocs:
+                new AddedToTheBottom(Blocs:
                 [
                     new DisplayBloc("1" + Environment.NewLine, IsError: true),
                     "3" + Environment.NewLine,

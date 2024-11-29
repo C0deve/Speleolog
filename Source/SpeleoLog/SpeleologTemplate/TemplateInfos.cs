@@ -1,7 +1,4 @@
-﻿using System.Reactive;
-using ReactiveUI;
-
-namespace SpeleoLog.SpeleologTemplate;
+﻿namespace SpeleoLog.SpeleologTemplate;
 
 public record TemplateInfos
 {

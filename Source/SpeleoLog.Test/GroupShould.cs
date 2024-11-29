@@ -1,5 +1,5 @@
 ﻿using Shouldly;
-using SpeleoLog.LogFileViewer.V2;
+using SpeleoLog.Viewer.Core;
 
 namespace SpeleoLog.Test;
 
@@ -20,7 +20,7 @@ public class GroupShould
     public void GroupHighlighted() =>
         new List<string> { "Hello world", "Bye world bye", "World Bye Bye" }
             .Select(s => s + Environment.NewLine)
-            .Select(s => new LogRow(s))
+            .Select(s => new Row(s))
             .SplitHighlightBloc("world")
             .SelectMany(runs => runs)
             .Group()

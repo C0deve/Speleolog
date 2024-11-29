@@ -1,6 +1,6 @@
-﻿namespace SpeleoLog.LogFileViewer.V2;
+﻿namespace SpeleoLog.Viewer.Core;
 
-public interface ITextFileLoaderV2
+public interface IFileLoader
 {
     Task<string[]> GetTextAsync(string filePath, CancellationToken cancellationToken);
 }

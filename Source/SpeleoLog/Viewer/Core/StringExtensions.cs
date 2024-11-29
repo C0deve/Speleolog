@@ -1,4 +1,4 @@
-﻿namespace SpeleoLog.LogFileViewer.V2;
+﻿namespace SpeleoLog.Viewer.Core;
 
 public static class StringExtensions
 {

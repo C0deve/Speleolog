@@ -1,6 +1,4 @@
-﻿using System.Reactive.Concurrency;
-
-namespace SpeleoLog.FileChanged;
+﻿namespace SpeleoLog._BaseClass;
 
 public interface ISchedulerProvider
 {

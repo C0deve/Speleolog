@@ -1,6 +1,4 @@
-﻿using SpeleoLog.LogFileViewer.V2;
-
-namespace SpeleoLog;
+﻿namespace SpeleoLog;
 
 public static class Extensions
 {
@@ -10,10 +8,10 @@ public static class Extensions
     public static IEnumerable<T> GetAll<T>(this IDictionary<int, T> source, params int[] indexes) =>
         GetAll(source, indexes.AsEnumerable());
 
-    public static IEnumerable<IEnumerable<DisplayBloc>> SplitHighlightBloc(this IEnumerable<LogRow> runsInput, string highlight) =>
+    public static IEnumerable<IEnumerable<DisplayBloc>> SplitHighlightBloc(this IEnumerable<Row> runsInput, string highlight) =>
         runsInput.Select(row => row.SplitHighlightBloc(highlight).Blocs);
 
-    public static DisplayRow SplitHighlightBloc(this LogRow row, string highlight) =>
+    public static DisplayRow SplitHighlightBloc(this Row row, string highlight) =>
         row.Text
             .Cut(highlight)
             .Select(bloc => new DisplayBloc(

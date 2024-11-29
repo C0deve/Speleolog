@@ -1,6 +1,4 @@
-﻿using Avalonia;
-using Avalonia.Dialogs;
-using Avalonia.ReactiveUI;
+﻿using Avalonia.Dialogs;
 
 namespace SpeleoLog;
 

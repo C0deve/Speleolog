@@ -1,5 +1,5 @@
 ﻿using Shouldly;
-using SpeleoLog.LogFileViewer.V2;
+using SpeleoLog.Viewer.Core;
 
 namespace SpeleoLog.Test;
 

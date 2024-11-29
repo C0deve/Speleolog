@@ -1,15 +1,22 @@
-﻿namespace SpeleoLog.LogFileViewer.V2;
+﻿namespace SpeleoLog._Infrastructure;
 
-public class TextFileLoaderV2 : ITextFileLoaderV2
+public class FileLoader : IFileLoader
 {
     private int _index;
 
+    /// <summary>
+    /// Return all 'unread' lines from filePath
+    /// </summary>
+    /// <param name="filePath"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    /// <remarks>Keeps of the number of lines read</remarks>
     public Task<string[]> GetTextAsync(string filePath, CancellationToken cancellationToken) => Task.Run(() =>
     {
         using var inStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var sr = new StreamReader(inStream);
 
-        // skipping the old data, it has read in the Form1_Load event handler
+        // skipping the old data
         for (var i = 0; i < _index; i++)
             sr.ReadLine();
 

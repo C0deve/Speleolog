@@ -1,26 +1,27 @@
 ﻿using Microsoft.Reactive.Testing;
 using NSubstitute;
 using Shouldly;
-using SpeleoLog.FileChanged;
+using SpeleoLog.Viewer.Core;
+using FileSystemWatcher = SpeleoLog._Infrastructure.FileSystemWatcher;
 
 namespace SpeleoLog.Test;
 
 public class FileSystemChangedObserverShould
 {
-    private readonly TimeSpan _throttleDurationPlusOne = FileChangedObservableFactory.ThrottleDuration + TimeSpan.FromMilliseconds(1);
+    private readonly TimeSpan _throttleDurationPlusOne = FileChangesObservableFactory.ThrottleDuration + TimeSpan.FromMilliseconds(1);
 
     [Fact]
     public async Task EmitOnFileChangedIntegration()
     {
         var actual = 0;
         var filePath = Utils.CreateUniqueEmptyFile();
-        var factory = new FileChangedObservableFactory(directoryPath => new FileSystemChangedWatcher(directoryPath));
+        var factory = new FileChangesObservableFactory(directoryPath => new FileSystemWatcher(directoryPath));
         var disposable = factory
-            .BuildFileChangedObservable(filePath)
+            .Build(filePath)
             .Subscribe(_ => actual++);
         
         await File.AppendAllLinesAsync(filePath, ["a"]);
-        await Task.Delay(FileChangedObservableFactory.ThrottleDuration + TimeSpan.FromMilliseconds(100));
+        await Task.Delay(FileChangesObservableFactory.ThrottleDuration + TimeSpan.FromMilliseconds(100));
 
         actual.ShouldBe(1);
         
@@ -35,9 +36,9 @@ public class FileSystemChangedObserverShould
         var scheduler = new TestScheduler();
         var actual = 0;
         var file = new FileTest();
-        var fileSystemObserver = Substitute.For<IFileSystemChangedWatcher>();
-        var factory = new FileChangedObservableFactory(_ => fileSystemObserver);
-        var sut = factory.BuildFileChangedObservable(file.Name, scheduler);
+        var fileSystemObserver = Substitute.For<IFileSystemWatcher>();
+        var factory = new FileChangesObservableFactory(_ => fileSystemObserver);
+        var sut = factory.Build(file.Name, scheduler);
         sut.Subscribe(_ => actual++);
         
         RaiseChangedEvent(fileSystemObserver, file.Name);
@@ -52,9 +53,9 @@ public class FileSystemChangedObserverShould
         var scheduler = new TestScheduler();
         var actual = 0;
         var file = new FileTest();
-        var fileSystemObserver = Substitute.For<IFileSystemChangedWatcher>();
-        var fileContentObserverProvider = new FileChangedObservableFactory(_ => fileSystemObserver);
-        var sut = fileContentObserverProvider.BuildFileChangedObservable(file.Name, scheduler);
+        var fileSystemObserver = Substitute.For<IFileSystemWatcher>();
+        var fileContentObserverProvider = new FileChangesObservableFactory(_ => fileSystemObserver);
+        var sut = fileContentObserverProvider.Build(file.Name, scheduler);
         sut.Subscribe(_ => actual++);
 
         RaiseChangedEvent(fileSystemObserver, "otherFile.txt");
@@ -69,9 +70,9 @@ public class FileSystemChangedObserverShould
         var actual = 0;
         var file = new FileTest();
         var scheduler = new TestScheduler();
-        var fileSystemObserver = Substitute.For<IFileSystemChangedWatcher>();
-        var fileContentObserverProvider = new FileChangedObservableFactory(_ => fileSystemObserver);
-        var sut = fileContentObserverProvider.BuildFileChangedObservable(file.Name, scheduler);
+        var fileSystemObserver = Substitute.For<IFileSystemWatcher>();
+        var fileContentObserverProvider = new FileChangesObservableFactory(_ => fileSystemObserver);
+        var sut = fileContentObserverProvider.Build(file.Name, scheduler);
         sut.Subscribe(_ => actual++);
 
         for (var i = 0; i < 10; i++)
@@ -84,10 +85,10 @@ public class FileSystemChangedObserverShould
         actual.ShouldBe(1); // 1 call 500ms after last event
     }
 
-    private static void RaiseChangedEvent(IFileSystemChangedWatcher fileSystemChangedWatcher, string? filePath)
+    private static void RaiseChangedEvent(IFileSystemWatcher fileSystemWatcher, string? filePath)
     {
-        fileSystemChangedWatcher.Changed += Raise.Event<FileSystemEventHandler>(
-            fileSystemChangedWatcher,
+        fileSystemWatcher.Changed += Raise.Event<FileSystemEventHandler>(
+            fileSystemWatcher,
             new FileSystemEventArgs(WatcherChangeTypes.Changed, "", filePath));
     }
 

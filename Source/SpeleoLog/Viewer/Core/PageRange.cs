@@ -1,7 +1,6 @@
 ﻿using System.Collections;
-using DynamicData;
 
-namespace SpeleoLog.LogFileViewer.V2;
+namespace SpeleoLog.Viewer.Core;
 
 public record PageRange : IEnumerable<int>
 {
@@ -29,7 +28,7 @@ public record PageRange : IEnumerable<int>
     public static PageRange Create(int start, int end) => new(start, end - start + 1);
     public IEnumerator<int> GetEnumerator() => _index.AsEnumerable().GetEnumerator();
 
-    private int IndexOf(int item) => _index.IndexOf(item);
+    private int IndexOf(int item) => Array.IndexOf(_index, item);
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     public IRangeCompare Compare(PageRange incomingRange)
@@ -54,7 +53,7 @@ public record PageRange : IEnumerable<int>
         if (incomingRange.Start > End)
             return new IsGoneForward(this[..], incomingRange[..], Size);
 
-        var localIndexOfIncomingStart = _index.IndexOf(incomingRange.Start);
+        var localIndexOfIncomingStart = Array.IndexOf(_index, incomingRange.Start);
         var incomingIndexOfLocalEnd = incomingRange.IndexOf(End);
 
         return new IsGoneForward(this[..localIndexOfIncomingStart], incomingRange[(incomingIndexOfLocalEnd + 1)..], Size);
@@ -65,7 +64,7 @@ public record PageRange : IEnumerable<int>
         if (incomingRange.End < Start)
             return new IsGoneBackward(this[..], incomingRange[..], Size);
 
-        var localIndexOfIncomingEnd = _index.IndexOf(incomingRange.End);
+        var localIndexOfIncomingEnd = Array.IndexOf(_index, incomingRange.End);
         var incomingIndexOfLocalStart = incomingRange.IndexOf(Start);
 
         return new IsGoneBackward(this[(localIndexOfIncomingEnd + 1)..], incomingRange[..incomingIndexOfLocalStart], Size);

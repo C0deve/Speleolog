@@ -1,7 +1,4 @@
-﻿using System.Reactive;
-using System.Reactive.Linq;
-
-namespace SpeleoLog;
+﻿namespace SpeleoLog;
 
 public static class ReactiveExtensions
 {

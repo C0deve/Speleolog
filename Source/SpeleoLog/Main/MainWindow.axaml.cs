@@ -1,7 +1,3 @@
-using Avalonia.Controls;
-using Avalonia.Input;
-using SpeleoLog._BaseClass;
-
 namespace SpeleoLog.Main;
 
 public partial class MainWindow : Window

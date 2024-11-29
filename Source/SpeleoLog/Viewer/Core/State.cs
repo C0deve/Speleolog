@@ -1,11 +1,11 @@
-﻿namespace SpeleoLog.LogFileViewer.V2;
+﻿namespace SpeleoLog.Viewer.Core;
 
-public class State : ValueObject
+public class State
 {
     private readonly List<IEvent> _events = [];
     private PageRange _actualPage = PageRange.Empty;
-    private readonly CacheV2 _cache = new();
-    private readonly EndToStartPaginatorV2 _paginator;
+    private readonly Cache _cache = new();
+    private readonly Paginator _paginator;
     private string _highlight = string.Empty;
 
     public IEvent[] Events => _events.ToArray();
@@ -13,7 +13,7 @@ public class State : ValueObject
     public int FilteredLogsCount => _cache.FilteredLogsCount;
     public bool IsSearchOn => _cache.IsSearchOn;
 
-    private State(int pageRange) => _paginator = new EndToStartPaginatorV2(pageRange);
+    private State(int pageRange) => _paginator = new Paginator(pageRange);
 
     public static State Initial(int pageRange) => new(pageRange);
 
@@ -71,7 +71,7 @@ public class State : ValueObject
     {
         if (string.Equals(setErrorTag.ErrorTag, _cache.ErrorTag, StringComparison.OrdinalIgnoreCase)) return;
 
-        _cache.SetErrorTag(setErrorTag.ErrorTag);
+        _cache.ErrorTag = setErrorTag.ErrorTag;
         ResetDisplayedRows();
     }
 
@@ -180,13 +180,5 @@ public class State : ValueObject
         yield return last is null
             ? new DisplayBloc(Environment.NewLine)
             : last with { Text = Environment.NewLine };
-    }
-
-    protected override IEnumerable<object> GetEqualityComponents()
-    {
-        foreach (var index in _actualPage)
-            yield return index;
-
-        yield return _cache;
     }
 }

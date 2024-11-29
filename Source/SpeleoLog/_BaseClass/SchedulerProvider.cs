@@ -1,7 +1,4 @@
-﻿using System.Reactive.Concurrency;
-using ReactiveUI;
-
-namespace SpeleoLog.FileChanged;
+﻿namespace SpeleoLog._BaseClass;
 
 public class SchedulerProvider : ISchedulerProvider
 {

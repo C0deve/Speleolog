@@ -1,5 +1,5 @@
 ﻿using Shouldly;
-using SpeleoLog.LogFileViewer.V2;
+using SpeleoLog.Viewer.Core;
 
 namespace SpeleoLog.Test;
 
@@ -11,21 +11,21 @@ public class HighlightShould
      InlineData(true, true),
      InlineData(false, false)]
     public void SplitOneBlocIfNoMatch(bool isNewLine, bool isError) =>
-        new LogRow("bla bla bla", IsNewLine: isNewLine, IsError: isError)
+        new Row("bla bla bla", IsNewLine: isNewLine, IsError: isError)
             .SplitHighlightBloc("hey")
             .Blocs
             .ShouldBe([new DisplayBloc("bla bla bla", IsHighlighted: false, IsError: isError, IsJustAdded: isNewLine)]);
 
     [Fact]
     public void SplitOneBloc() =>
-        new LogRow("hey")
+        new Row("hey")
             .SplitHighlightBloc("hey")
             .Blocs
             .ShouldBe([new DisplayBloc("hey", IsHighlighted: true)]);
 
     [Fact]
     public void Split() =>
-        new LogRow("hey bla bla hey bla bla hey")
+        new Row("hey bla bla hey bla bla hey")
             .SplitHighlightBloc("hey")
             .Blocs
             .ShouldBe([
@@ -38,7 +38,7 @@ public class HighlightShould
 
     [Fact]
     public void Split2() =>
-        new LogRow("heyblaheyhey")
+        new Row("heyblaheyhey")
             .SplitHighlightBloc("hey")
             .Blocs
             .ShouldBe([
@@ -50,7 +50,7 @@ public class HighlightShould
 
     [Fact]
     public void Split3() =>
-        new LogRow("blaheybla")
+        new Row("blaheybla")
             .SplitHighlightBloc("hey")
             .Blocs
             .ShouldBe([
@@ -61,7 +61,7 @@ public class HighlightShould
     
     [Fact]
     public void Split4() =>
-        new LogRow("111")
+        new Row("111")
             .SplitHighlightBloc("11")
             .Blocs
             .ShouldBe([

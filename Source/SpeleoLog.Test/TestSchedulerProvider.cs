@@ -1,5 +1,5 @@
 ﻿using System.Reactive.Concurrency;
-using SpeleoLog.FileChanged;
+using SpeleoLog._BaseClass;
 
 namespace SpeleoLog.Test;
 

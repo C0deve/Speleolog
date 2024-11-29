@@ -1,12 +1,16 @@
-﻿namespace SpeleoLog.FileChanged;
+﻿namespace SpeleoLog._Infrastructure;
 
-public sealed class FileSystemChangedWatcher : IFileSystemChangedWatcher
+/// <summary>
+/// Wrapper around <see cref="System.IO.FileSystemWatcher"/>
+/// Track only changed events
+/// </summary>
+public sealed class FileSystemWatcher : IFileSystemWatcher
 {
-    private readonly FileSystemWatcher _fileSystemWatcher;
+    private readonly System.IO.FileSystemWatcher _fileSystemWatcher;
 
-    public FileSystemChangedWatcher(string directoryPath)
+    public FileSystemWatcher(string directoryPath)
     {
-        _fileSystemWatcher = new FileSystemWatcher(directoryPath);
+        _fileSystemWatcher = new System.IO.FileSystemWatcher(directoryPath);
         _fileSystemWatcher.EnableRaisingEvents = true;
         _fileSystemWatcher.NotifyFilter = NotifyFilters.LastWrite;
         

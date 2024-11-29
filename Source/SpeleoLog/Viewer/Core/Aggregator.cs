@@ -1,8 +1,8 @@
-﻿namespace SpeleoLog.LogFileViewer.V2;
+﻿namespace SpeleoLog.Viewer.Core;
 
-public static class LogAggregator
+public static class Aggregator
 {
-    public static IEnumerable<LogGroup> AggregateLog(this IEnumerable<LogRow> rows) =>
+    public static IEnumerable<LogGroup> AggregateLog(this IEnumerable<Row> rows) =>
         rows.Aggregate(
             new List<LogGroup>(),
             (builders, row) =>
@@ -20,28 +20,28 @@ public static class LogAggregator
 
 public record GroupKey(bool IsError, bool IsNewLine)
 {
-    public static GroupKey FromLog(LogRow log) => new(log.IsError, log.IsNewLine);
+    public static GroupKey FromLog(Row log) => new(log.IsError, log.IsNewLine);
 }
 
 public class LogGroup
 {
-    private readonly List<LogRow> _logLines = [];
+    private readonly List<Row> _logLines = [];
     public string[] Rows => _logLines.Select(row => row.Text).ToArray();
 
     public GroupKey Key { get; }
 
-    public LogGroup(LogRow logRow)
+    public LogGroup(Row row)
     {
-        Key = GroupKey.FromLog(logRow);
-        _logLines.Add(logRow);
+        Key = GroupKey.FromLog(row);
+        _logLines.Add(row);
     }
 
-    public LogGroup Add(LogRow logRow)
+    public LogGroup Add(Row row)
     {
-        if (new GroupKey(logRow.IsError, logRow.IsNewLine) != Key) 
+        if (new GroupKey(row.IsError, row.IsNewLine) != Key) 
             throw new ArgumentException("Log row must have same isError and isNewline than group row");
         
-        _logLines.Add(logRow);
+        _logLines.Add(row);
         return this;
 
     }
