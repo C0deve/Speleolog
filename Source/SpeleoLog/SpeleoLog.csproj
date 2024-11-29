@@ -55,5 +55,16 @@
         <DependentUpon>ViewerV2View.axaml</DependentUpon>
         <SubType>Code</SubType>
       </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageVersion Update="Avalonia" Version="11.2.2" />
+      <PackageVersion Update="Avalonia.Controls.ItemsRepeater" Version="11.1.5" />
+      <PackageVersion Update="Avalonia.Desktop" Version="11.2.2" />
+      <PackageVersion Update="Avalonia.Themes.Fluent" Version="11.2.2" />
+      <PackageVersion Update="Avalonia.Fonts.Inter" Version="11.2.2" />
+      <PackageVersion Update="Avalonia.Markup.Xaml.Loader" Version="11.2.2" />
+      <PackageVersion Update="Avalonia.Diagnostics" Version="11.2.2" />
+      <PackageVersion Update="Avalonia.ReactiveUI" Version="11.2.2" />
     </ItemGroup>    
 </Project>
