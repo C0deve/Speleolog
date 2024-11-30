@@ -88,7 +88,7 @@ public class State
         _paginator.Move(50);
         _events.AddRange(RefreshDisplayedRows());
     }
-    
+
     private void DoGoToTop() => ResetDisplayedRows();
 
     private void DoMask(Mask mask)
@@ -160,7 +160,7 @@ public class State
             yield return new AddedToTheBottom(isGoneBackward.DeleteFromTop.Length, isGoneBackward.PageSize, logRows);
     }
 
-    private DisplayBloc[] BuildBlocs(int[] range) =>
+    private TextBlock[] BuildBlocs(int[] range) =>
         _cache[range]
             .Reverse()
             .Select(row => row.SplitHighlightBloc(_highlight))
@@ -168,9 +168,13 @@ public class State
             .Group()
             .ToArray();
 
-    private static IEnumerable<DisplayBloc> GetBlocs(DisplayRow row)
+    private static IEnumerable<TextBlock> GetBlocs(DisplayedRow row)
     {
-        DisplayBloc? last = null;
+        yield return new TextBlock(row.Index
+            .ToString()
+            .PadRight(8, ' '), IsRowNumber: true);
+
+        TextBlock? last = null;
         foreach (var displayBloc in row.Blocs)
         {
             last = displayBloc;
@@ -178,7 +182,7 @@ public class State
         }
 
         yield return last is null
-            ? new DisplayBloc(Environment.NewLine)
+            ? new TextBlock(Environment.NewLine)
             : last with { Text = Environment.NewLine };
     }
 }

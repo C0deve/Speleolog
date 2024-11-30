@@ -3,7 +3,9 @@
   <component name="AvaloniaProject">
     <option name="projectPerEditor">
       <map>
+        <entry key="SpeleoLog/App.axaml" value="SpeleoLog/SpeleoLog.csproj" />
         <entry key="SpeleoLog/Viewer/LogFileViewerV2View.axaml" value="SpeleoLog/SpeleoLog.csproj" />
+        <entry key="SpeleoLog/Viewer/Viewer.axaml" value="SpeleoLog/SpeleoLog.csproj" />
         <entry key="SpeleoLog/Viewer/ViewerV2View.axaml" value="SpeleoLog/SpeleoLog.csproj" />
         <entry key="SpeleoLogViewer/App.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />
         <entry key="SpeleoLogViewer/LogFileViewer/Dockable/DockableLogFileView.axaml" value="SpeleoLogViewer/SpeleoLogViewer.csproj" />

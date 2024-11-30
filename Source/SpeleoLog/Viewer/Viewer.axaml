@@ -24,6 +24,10 @@
             <Style Selector="Run.Error">
                 <Setter Property="Foreground" Value="{StaticResource Error}" />
             </Style>
+            <Style Selector="Run.RowNumber">
+                <Setter Property="Background" Value="Gainsboro" />
+                <Setter Property="Foreground" Value="Gray" />
+            </Style>
             <Style Selector="Run.HighLight">
                 <Setter Property="Background" Value="DarkSalmon" />
                 <Setter Property="Foreground" Value="Indigo" />
@@ -53,7 +57,7 @@
             Grid.Row="0"
             HorizontalScrollBarVisibility="Auto"
             x:Name="ScrollViewer">
-            <SelectableTextBlock Padding="0.5" x:Name="LogContent" FontFamily="Verdana"/>
+            <SelectableTextBlock Padding="0.5" x:Name="LogContent" FontFamily="Consolas"/>
         </ScrollViewer>
 
         <!--  ToolBar  -->
@@ -62,7 +66,8 @@
                 Grid.Column="0"
                 Margin="2"
                 TextWrapping="Wrap"
-                VerticalAlignment="Center">
+                VerticalAlignment="Center"
+                >
                 <Run Text="{Binding FilePath}" />
                 <Italic>
                     <Run Text="{Binding LogsCountDisplay}" />

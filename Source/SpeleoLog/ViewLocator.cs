@@ -9,17 +9,17 @@ public class ViewLocator : IDataTemplate
         var name = data?.GetType().FullName?
             .Replace("VM", "");
         if (name is null)
-            return new TextBlock { Text = "Invalid Data Type" };
+            return new Avalonia.Controls.TextBlock { Text = "Invalid Data Type" };
         
         var type = Type.GetType(name);
         if (type is null) 
-            return new TextBlock { Text = "Not Found: " + name };
+            return new Avalonia.Controls.TextBlock { Text = "Not Found: " + name };
         
         var instance = Activator.CreateInstance(type);
         if (instance is not null)
             return (Control)instance;
 
-        return new TextBlock { Text = "Create Instance Failed: " + type.FullName };
+        return new Avalonia.Controls.TextBlock { Text = "Create Instance Failed: " + type.FullName };
     }
 
     public bool Match(object? data) => data is IDockable;

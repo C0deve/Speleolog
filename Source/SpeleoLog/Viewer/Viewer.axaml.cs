@@ -188,20 +188,23 @@ public partial class Viewer : ReactiveUserControl<ViewerVM>, IEnableLogger
         scrollViewer.SetCurrentValue(ScrollViewer.OffsetProperty, scrollViewer.Offset + new Vector(0, offsetDelta));
     }
 
-    private Run MapToRun(DisplayBloc displayBloc)
+    private Run MapToRun(TextBlock textBlock)
     {
-        var run = new Run(displayBloc.Text);
+        var run = new Run(textBlock.Text);
 
-        if (displayBloc.IsError)
+        if(textBlock.IsRowNumber)
+            run.Classes.Add("RowNumber");
+
+        if (textBlock.IsError)
             run.Classes.Add("Error");
 
-        if (displayBloc.IsJustAdded)
+        if (textBlock.IsJustAdded)
         {
             run.Classes.Add("JustAdded");
             AddTimerToRemoveClass(run);
         }
 
-        if (displayBloc.IsHighlighted)
+        if (textBlock.IsHighlighted)
             run.Classes.Add("HighLight");
         return run;
     }

@@ -5,22 +5,6 @@ namespace SpeleoLog.Test.V2;
 
 internal static class ShouldyExtension
 {
-    public static void ShouldBe(this LogGroup[] source, IEnumerable<LogGroup> expected)
-    {
-        var array = expected.ToArray();
-        source.Length.ShouldBe(array.Length);
-        source.ShouldSatisfyAllConditions(() =>
-        {
-            for (var i = 0; i < source.Length; i++)
-            {
-                var actual = source[i];
-                var theExpected = array[i];
-                actual.GetType().ShouldBe(theExpected.GetType());
-                actual.Rows.ShouldBe(theExpected.Rows);
-            }
-        });
-    }
-
     public static void ShouldBe(this IEvent[] events, IEnumerable<IEvent> expected)
     {
         var array = expected.ToArray();
@@ -58,7 +42,7 @@ internal static class ShouldyExtension
         });
     }
 
-    private static void ShouldBe(DisplayBloc[] actualLogList, DisplayBloc[] expectedLogList)
+    private static void ShouldBe(TextBlock[] actualLogList, TextBlock[] expectedLogList)
     {
         for (var i1 = 0; i1 < actualLogList.Length; i1++) 
             actualLogList[i1].ShouldBe(expectedLogList[i1], $"i1 = {i1}");

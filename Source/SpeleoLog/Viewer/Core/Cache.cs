@@ -33,14 +33,14 @@ public class Cache
         range
             .Where(i => i < _filteredIndex.Count)
             .Select(i => _filteredIndex[i])
-            .Select(x => new Row(_logs[x], IsInitialized && LastAddedIndex.Contains(x)))
+            .Select(x => new Row(x, _logs[x], IsNewLine: IsInitialized && LastAddedIndex.Contains(x)))
             .SetIsError(ErrorTag)
             .MaskRows(Mask)
             .ToArray();
 
     public Row[] this[Range range] =>
         _filteredIndex[range]
-            .Select(x => new Row(_logs[x], IsInitialized && LastAddedIndex.Contains(x)))
+            .Select(x => new Row(x, _logs[x], IsNewLine: IsInitialized && LastAddedIndex.Contains(x)))
             .SetIsError(ErrorTag)
             .MaskRows(Mask)
             .ToArray();

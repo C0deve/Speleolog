@@ -11,61 +11,61 @@ public class HighlightShould
      InlineData(true, true),
      InlineData(false, false)]
     public void SplitOneBlocIfNoMatch(bool isNewLine, bool isError) =>
-        new Row("bla bla bla", IsNewLine: isNewLine, IsError: isError)
+        new Row(0, "bla bla bla", IsNewLine: isNewLine, IsError: isError)
             .SplitHighlightBloc("hey")
             .Blocs
-            .ShouldBe([new DisplayBloc("bla bla bla", IsHighlighted: false, IsError: isError, IsJustAdded: isNewLine)]);
+            .ShouldBe([new TextBlock("bla bla bla", IsHighlighted: false, IsError: isError, IsJustAdded: isNewLine)]);
 
     [Fact]
     public void SplitOneBloc() =>
-        new Row("hey")
+        new Row(0, "hey")
             .SplitHighlightBloc("hey")
             .Blocs
-            .ShouldBe([new DisplayBloc("hey", IsHighlighted: true)]);
+            .ShouldBe([new TextBlock("hey", IsHighlighted: true)]);
 
     [Fact]
     public void Split() =>
-        new Row("hey bla bla hey bla bla hey")
+        new Row(0, "hey bla bla hey bla bla hey")
             .SplitHighlightBloc("hey")
             .Blocs
             .ShouldBe([
-                new DisplayBloc("hey", IsHighlighted: true),
-                new DisplayBloc(" bla bla "),
-                new DisplayBloc("hey", IsHighlighted: true),
-                new DisplayBloc(" bla bla "),
-                new DisplayBloc("hey", IsHighlighted: true)
+                new TextBlock("hey", IsHighlighted: true),
+                new TextBlock(" bla bla "),
+                new TextBlock("hey", IsHighlighted: true),
+                new TextBlock(" bla bla "),
+                new TextBlock("hey", IsHighlighted: true)
             ]);
 
     [Fact]
     public void Split2() =>
-        new Row("heyblaheyhey")
+        new Row(0, "heyblaheyhey")
             .SplitHighlightBloc("hey")
             .Blocs
             .ShouldBe([
-                new DisplayBloc("hey", IsHighlighted: true),
-                new DisplayBloc("bla"),
-                new DisplayBloc("hey", IsHighlighted: true),
-                new DisplayBloc("hey", IsHighlighted: true)
+                new TextBlock("hey", IsHighlighted: true),
+                new TextBlock("bla"),
+                new TextBlock("hey", IsHighlighted: true),
+                new TextBlock("hey", IsHighlighted: true)
             ]);
 
     [Fact]
     public void Split3() =>
-        new Row("blaheybla")
+        new Row(0, "blaheybla")
             .SplitHighlightBloc("hey")
             .Blocs
             .ShouldBe([
-                new DisplayBloc("bla"),
-                new DisplayBloc("hey", IsHighlighted: true),
-                new DisplayBloc("bla")
+                new TextBlock("bla"),
+                new TextBlock("hey", IsHighlighted: true),
+                new TextBlock("bla")
             ]);
     
     [Fact]
     public void Split4() =>
-        new Row("111")
+        new Row(0, "111")
             .SplitHighlightBloc("11")
             .Blocs
             .ShouldBe([
-                new DisplayBloc("11", IsHighlighted: true),
-                new DisplayBloc("1")
+                new TextBlock("11", IsHighlighted: true),
+                new TextBlock("1")
             ]);
 }

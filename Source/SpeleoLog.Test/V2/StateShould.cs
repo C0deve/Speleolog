@@ -33,7 +33,7 @@ public class StateShould
             .ShouldBe([
                 new AddedToTheBottom(Blocs: "123" + Environment.NewLine),
                 new AddedToTheTop(0, 1, true,
-                    new DisplayBloc("4" + Environment.NewLine, IsJustAdded: true))
+                    new TextBlock("4" + Environment.NewLine, IsJustAdded: true))
             ]);
     }
 
@@ -51,7 +51,7 @@ public class StateShould
                 new AddedToTheTop(3,
                     3,
                     true,
-                    new DisplayBloc("6" + Environment.NewLine + "5" + Environment.NewLine + "4" + Environment.NewLine,
+                    new TextBlock("6" + Environment.NewLine + "5" + Environment.NewLine + "4" + Environment.NewLine,
                         true)),
             ]);
 
@@ -66,8 +66,11 @@ public class StateShould
             .ShouldBe([
                 IEvent.DeletedAll,
                 new AddedToTheBottom(0, 0,
-                    "1" + Environment.NewLine +
-                    "1" + Environment.NewLine +
+                    TextBlock.RowNumber(3),
+                    "1" + Environment.NewLine,
+                    TextBlock.RowNumber(1),
+                    "1" + Environment.NewLine,
+                    TextBlock.RowNumber(0),
                     "1" + Environment.NewLine)
             ]);
 
@@ -103,7 +106,8 @@ public class StateShould
             .Events
             .ShouldBe([
                 new AddedToTheTop(0, 3, true,
-                    new DisplayBloc("1" + Environment.NewLine, IsJustAdded: true))
+                    TextBlock.RowNumber(4),
+                    new TextBlock("1" + Environment.NewLine, IsJustAdded: true))
             ]);
 
     [Fact]
@@ -120,7 +124,7 @@ public class StateShould
         enumerable
             .ShouldBe([
                 new AddedToTheTop(0, 4, true,
-                    new DisplayBloc(Environment.NewLine, IsJustAdded: true))
+                    new TextBlock(Environment.NewLine, IsJustAdded: true))
             ]);
     }
 
@@ -217,7 +221,8 @@ public class StateShould
                         .Select(x => $"{x}" + Environment.NewLine)
                     ))
             ]);
- [Fact]
+
+    [Fact]
     public void GoTop() =>
         State
             .Initial(10)
@@ -273,9 +278,12 @@ public class StateShould
                 new DeletedAll(),
                 new AddedToTheBottom(Blocs:
                 [
-                    new DisplayBloc("1" + Environment.NewLine, IsError: true),
+                    TextBlock.RowNumber(3),
+                    new TextBlock("1" + Environment.NewLine, IsError: true),
+                    TextBlock.RowNumber(1),
                     "3" + Environment.NewLine,
-                    new DisplayBloc("1" + Environment.NewLine + "1" + Environment.NewLine, IsError: true),
+                    TextBlock.RowNumber(0),
+                    new TextBlock("1" + Environment.NewLine + "1" + Environment.NewLine, IsError: true),
                 ])
             ]);
 
@@ -301,11 +309,11 @@ public class StateShould
             .ShouldBe([
                 new Updated(
                     "_",
-                    new DisplayBloc("ab", IsHighlighted: true),
+                    new TextBlock("ab", IsHighlighted: true),
                     " " + Environment.NewLine,
-                    new DisplayBloc("ab", IsHighlighted: true),
+                    new TextBlock("ab", IsHighlighted: true),
                     "g" + Environment.NewLine + "def" + Environment.NewLine,
-                    new DisplayBloc("ab", IsHighlighted: true),
+                    new TextBlock("ab", IsHighlighted: true),
                     "c" + Environment.NewLine
                 )
             ]);
