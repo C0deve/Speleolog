@@ -7,17 +7,17 @@ public class StateShould
 {
     [Fact]
     public void Initialize() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh("123"))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("123"))
             .Events
-            .ShouldBe([new AddedToTheBottom(Blocs: "123" + Environment.NewLine)]);
+            .ShouldBe([new AddedToTheBottom(Rows: "123")]);
 
     [Fact]
     public void ClearEvents() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh("123"))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("123"))
             .ClearEvents()
             .Events
             .ShouldBe([]);
@@ -25,60 +25,59 @@ public class StateShould
     [Fact]
     public void Refresh()
     {
-        State
-            .Initial(10)
-            .Handle(new Refresh("123"))
-            .Handle(new Refresh("4"))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("123"))
+            .Handle(new AddRows("4"))
             .Events
             .ShouldBe([
-                new AddedToTheBottom(Blocs: "123" + Environment.NewLine),
-                new AddedToTheTop(0, 1, true,
-                    new TextBlock("4" + Environment.NewLine, IsJustAdded: true))
+                new AddedToTheBottom(Rows: "123"),
+                new AddedToTheTop(0, true,
+                    new DisplayedRow(1, TextBlock.JustAdded("4")))
             ]);
     }
 
     [Fact]
     public void RefreshWithPaging() =>
-        State
-            .Initial(3)
-            .Handle(new Refresh("1", "2", "3"))
-            .Handle(new Refresh("4", "5", "6"))
+        new State()
+            .Handle(new SetDisplayedRange(3))
+            .Handle(new AddRows("1", "2", "3"))
+            .Handle(new AddRows("4", "5", "6"))
             .Events
             .ShouldBe([
                 new AddedToTheBottom(0,
-                    0,
-                    "3" + Environment.NewLine + "2" + Environment.NewLine + "1" + Environment.NewLine),
-                new AddedToTheTop(3,
-                    3,
+                    new DisplayedRow(2, "3"),
+                    new DisplayedRow(1, "2"),
+                    new DisplayedRow(0, "1")),
+                new AddedToTheTop(2,
                     true,
-                    new TextBlock("6" + Environment.NewLine + "5" + Environment.NewLine + "4" + Environment.NewLine,
-                        true)),
+                    new DisplayedRow(5, TextBlock.JustAdded("6")),
+                    new DisplayedRow(4, TextBlock.JustAdded("5")),
+                    new DisplayedRow(3, TextBlock.JustAdded("4"))
+                )
             ]);
 
     [Fact]
     public void Filter() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh("1", "1", "3", "1"))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("1", "1", "3", "1"))
             .ClearEvents()
             .Handle(new Filter("1"))
             .Events
             .ShouldBe([
-                IEvent.DeletedAll,
-                new AddedToTheBottom(0, 0,
-                    TextBlock.RowNumber(3),
-                    "1" + Environment.NewLine,
-                    TextBlock.RowNumber(1),
-                    "1" + Environment.NewLine,
-                    TextBlock.RowNumber(0),
-                    "1" + Environment.NewLine)
+                IEvent.AllDeleted,
+                new AddedToTheBottom(0,
+                    new DisplayedRow(3, "1"),
+                    new DisplayedRow(1, "1"),
+                    new DisplayedRow(0, "1"))
             ]);
 
     [Fact]
     public void FilterOnlyIfChanged() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh("1", "1", "3", "1"))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("1", "1", "3", "1"))
             .Handle(new Filter("1"))
             .ClearEvents()
             .Handle(new Filter("1"))
@@ -87,70 +86,68 @@ public class StateShould
 
     [Fact]
     public void FilterWithNoMatch() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh("1", "1", "1", "1"))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("1", "1", "1", "1"))
             .ClearEvents()
             .Handle(new Filter("2"))
             .Events
-            .ShouldBe([new DeletedAll()]);
+            .ShouldBe([new AllDeleted()]);
 
     [Fact]
     public void FilterThenRefresh() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh("1", "1", "3", "1"))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("1", "1", "3", "1"))
             .Handle(new Filter("1"))
             .ClearEvents()
-            .Handle(new Refresh("1"))
+            .Handle(new AddRows("1"))
             .Events
             .ShouldBe([
-                new AddedToTheTop(0, 3, true,
-                    TextBlock.RowNumber(4),
-                    new TextBlock("1" + Environment.NewLine, IsJustAdded: true))
+                new AddedToTheTop(0, true,
+                    new DisplayedRow(4, TextBlock.JustAdded("1")))
             ]);
 
     [Fact]
     public void MaskThenRefresh()
     {
-        var enumerable = State
-            .Initial(10)
-            .Handle(new Refresh("1", "1", "3", "1"))
+        var enumerable = new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("1", "1", "3", "1"))
             .Handle(new Mask("1"))
             .ClearEvents()
-            .Handle(new Refresh("1"))
+            .Handle(new AddRows("1"))
             .Events
             .ToArray();
         enumerable
             .ShouldBe([
-                new AddedToTheTop(0, 4, true,
-                    new TextBlock(Environment.NewLine, IsJustAdded: true))
+                new AddedToTheTop(0, true,
+                    new DisplayedRow(4, TextBlock.JustAdded("")))
             ]);
     }
 
     [Fact]
     public void Mask() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh("abc", "def", "abg", "ab "))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("abc", "def", "abg", "ab "))
             .ClearEvents()
             .Handle(new Mask("ab"))
             .Events
             .ShouldBe([
-                new DeletedAll(),
+                new AllDeleted(),
                 new AddedToTheBottom(0,
-                    0,
-                    " " + Environment.NewLine +
-                    "g" + Environment.NewLine +
-                    "def" + Environment.NewLine +
-                    "c" + Environment.NewLine)
+                    new DisplayedRow(3, " "),
+                    new DisplayedRow(2, "g"),
+                    new DisplayedRow(1, "def"),
+                    new DisplayedRow(0, "c"))
             ]);
 
     [Fact]
     public void MaskOnlyIfChanged() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh("abc", "def", "abg", "ab "))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("abc", "def", "abg", "ab "))
             .Handle(new Mask("ab"))
             .ClearEvents()
             .Handle(new Mask("ab"))
@@ -159,93 +156,101 @@ public class StateShould
 
     [Fact]
     public void Paginate() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
             .Events
             .ShouldBe([
-                new AddedToTheBottom(Blocs: string.Join("", Enumerable
-                    .Range(90, 10)
+                new AddedToTheBottom(Rows: Enumerable
+                    .Range(85, 15)
                     .Reverse()
-                    .Select(x => $"{x}" + Environment.NewLine)
-                ))
+                    .Select(x => new DisplayedRow(x, $"{x}"))
+                    .ToArray()
+                )
             ]);
 
     [Fact]
     public void PaginateOnFilter() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh(Enumerable.Repeat("a", 100).ToArray()))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows(Enumerable.Repeat("a", 100).ToArray()))
             .ClearEvents()
             .Handle(new Filter("a"))
             .Events
             .ToArray()
             .ShouldBe([
-                    new DeletedAll(),
-                    new AddedToTheBottom(Blocs: string.Join("", Enumerable.Repeat("a" + Environment.NewLine, 10)))
+                    new AllDeleted(),
+                    new AddedToTheBottom(Rows: Enumerable
+                        .Range(85, 15)
+                        .Reverse()
+                        .Select(x => new DisplayedRow(x, "a"))
+                        .ToArray())
                 ]
             );
 
     [Fact]
     public void GoPrevious() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
             .ClearEvents()
             .Handle(new Previous())
             .Events
             .ShouldBe([
-                new AddedToTheBottom(10,
-                    10,
-                    Blocs: string.Join("", Enumerable.Range(40, 10)
+                new AddedToTheBottom(15,
+                    Rows: Enumerable.Range(70, 15)
                         .Reverse()
-                        .Select(x => $"{x}" + Environment.NewLine)
-                    )),
+                        .Select(x => new DisplayedRow(x, $"{x}"))
+                        .ToArray()
+                ),
             ]);
 
     [Fact]
     public void GoNext() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
+            .Handle(new Previous())
+            .Handle(new Previous())
+            .Handle(new Previous())
             .Handle(new Previous())
             .ClearEvents()
             .Handle(new Next())
             .Events
             .ShouldBe([
-                new AddedToTheTop(RemovedFromBottomCount: 10,
-                    PreviousPageSize: 10,
+                new AddedToTheTop(RemovedFromBottomCount: 5,
                     IsOnTop: true,
-                    Blocs: string.Join("", Enumerable.Range(90, 10)
+                    Rows: Enumerable.Range(90, 10)
                         .Reverse()
-                        .Select(x => $"{x}" + Environment.NewLine)
-                    ))
+                        .Select(x => new DisplayedRow(x, $"{x}"))
+                        .ToArray()
+                )
             ]);
 
     [Fact]
     public void GoTop() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
             .Handle(new Previous())
             .ClearEvents()
             .Handle(new GoToTop())
             .Events
             .ShouldBe([
-                new DeletedAll(),
+                new AllDeleted(),
                 new AddedToTheBottom(RemovedFromTopCount: 0,
-                    PreviousPageSize: 0,
-                    Blocs: string.Join("", Enumerable.Range(90, 10)
+                    Rows: Enumerable.Range(85, 15)
                         .Reverse()
-                        .Select(x => $"{x}" + Environment.NewLine)
-                    ))
+                        .Select(x => new DisplayedRow(x, $"{x}"))
+                        .ToArray()
+                )
             ]);
 
     [Fact]
     public void GoNextOnLastPage() =>
-        State
-            .Initial(pageRange: 100)
-            .Handle(new Refresh(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
+        new State()
+            .Handle(new SetDisplayedRange(100))
+            .Handle(new AddRows(Enumerable.Range(0, 100).Select(x => $"{x}").ToArray()))
             .ClearEvents()
             .Handle(new Next())
             .Events
@@ -260,7 +265,7 @@ public class StateShould
 
     [Theory, MemberData(nameof(Data))]
     public void NotInitialize(ICommand command) =>
-        State.Initial(10)
+        new State().Handle(new SetDisplayedRange(10))
             .ClearEvents()
             .Handle(command)
             .Events
@@ -268,30 +273,28 @@ public class StateShould
 
     [Fact]
     public void SetErrorTag() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh("1", "1", "3", "1"))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("1", "1", "3", "1"))
             .ClearEvents()
             .Handle(new SetErrorTag("1"))
             .Events
             .ShouldBe([
-                new DeletedAll(),
-                new AddedToTheBottom(Blocs:
+                new AllDeleted(),
+                new AddedToTheBottom(Rows:
                 [
-                    TextBlock.RowNumber(3),
-                    new TextBlock("1" + Environment.NewLine, IsError: true),
-                    TextBlock.RowNumber(1),
-                    "3" + Environment.NewLine,
-                    TextBlock.RowNumber(0),
-                    new TextBlock("1" + Environment.NewLine + "1" + Environment.NewLine, IsError: true),
+                    new DisplayedRow(3, new TextBlock("1", IsError: true)),
+                    new DisplayedRow(2, new TextBlock("3")),
+                    new DisplayedRow(1, new TextBlock("1", IsError: true)),
+                    new DisplayedRow(0, new TextBlock("1", IsError: true))
                 ])
             ]);
 
     [Fact]
     public void SetErrorTagOnlyIfChanged() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh("abc", "def"))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("abc", "def"))
             .Handle(new SetErrorTag("1"))
             .ClearEvents()
             .Handle(new SetErrorTag("1"))
@@ -300,21 +303,42 @@ public class StateShould
 
     [Fact]
     public void Highlight() =>
-        State
-            .Initial(10)
-            .Handle(new Refresh("abc", "def", "abg", "_ab "))
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows("abc", "def", "abg", "_ab "))
             .ClearEvents()
             .Handle(new Highlight("ab"))
             .Events
             .ShouldBe([
-                new Updated(
-                    "_",
-                    new TextBlock("ab", IsHighlighted: true),
-                    " " + Environment.NewLine,
-                    new TextBlock("ab", IsHighlighted: true),
-                    "g" + Environment.NewLine + "def" + Environment.NewLine,
-                    new TextBlock("ab", IsHighlighted: true),
-                    "c" + Environment.NewLine
+                new AllReplaced(
+                    new DisplayedRow(3, "_", new TextBlock("ab", IsHighlighted: true), " "),
+                    new DisplayedRow(2, new TextBlock("ab", IsHighlighted: true), "g"),
+                    new DisplayedRow(1, "def"),
+                    new DisplayedRow(0, new TextBlock("ab", IsHighlighted: true), "c")
                 )
+            ]);
+
+    [Fact]
+    public void SetPageRange() =>
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new SetDisplayedRange(20))
+            .Events
+            .ShouldBeEmpty();
+
+    [Fact]
+    public void SetSmallerPageRange() =>
+        new State()
+            .Handle(new SetDisplayedRange(10))
+            .Handle(new AddRows(Enumerable.Repeat("a", 30).ToArray()))
+            .ClearEvents()
+            .Handle(new SetDisplayedRange(20))
+            .Events
+            .ShouldBe([
+                new AllDeleted(),
+                new AddedToTheBottom(Rows: Enumerable.Range(0, 30)
+                        .Reverse()
+                        .Select(x => new DisplayedRow(x, new TextBlock("a")))
+                        .ToArray())
             ]);
 }

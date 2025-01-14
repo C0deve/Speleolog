@@ -23,16 +23,14 @@ internal static class ShouldyExtension
                         var theExpected1 = (AddedToTheTop)theExpected;
                         addedToTheTop.IsOnTop.ShouldBe(theExpected1.IsOnTop);
                         addedToTheTop.RemovedFromBottomCount.ShouldBe(theExpected1.RemovedFromBottomCount);
-                        addedToTheTop.PreviousPageSize.ShouldBe(theExpected1.PreviousPageSize);
-                        ShouldBe(addedToTheTop.Blocs.ToArray(), theExpected1.Blocs.ToArray());
+                        addedToTheTop.Rows.ToArray().ShouldBe( theExpected1.Rows.ToArray());
                         break;
                     case AddedToTheBottom addedToTheBottom:
                         var theExpected2 = (AddedToTheBottom)theExpected;
-                        addedToTheBottom.PreviousPageSize.ShouldBe(theExpected2.PreviousPageSize);
-                        ShouldBe(addedToTheBottom.Blocs.ToArray(), theExpected2.Blocs.ToArray());
+                        addedToTheBottom.Rows.ToArray().ShouldBe(theExpected2.Rows.ToArray());
                         break;
-                    case Updated updated:
-                        ShouldBe(updated.Blocs.ToArray(), ((Updated)theExpected).Blocs.ToArray());
+                    case AllReplaced updated:
+                        updated.Rows.ToArray().ShouldBe(((AllReplaced)theExpected).Rows.ToArray());
                         break;
                     default:
                         actual.ShouldBe(theExpected);
@@ -42,9 +40,15 @@ internal static class ShouldyExtension
         });
     }
 
-    private static void ShouldBe(TextBlock[] actualLogList, TextBlock[] expectedLogList)
+    private static void ShouldBe(this DisplayedRow[] actualLogList, DisplayedRow[] expectedLogList)
     {
         for (var i1 = 0; i1 < actualLogList.Length; i1++) 
-            actualLogList[i1].ShouldBe(expectedLogList[i1], $"i1 = {i1}");
+            actualLogList[i1].ShouldBe(expectedLogList[i1]);
+    }
+    private static void ShouldBe(this DisplayedRow actualLogList, DisplayedRow expectedLogList)
+    {
+        actualLogList.Index.ShouldBe(expectedLogList.Index);
+        for (var i1 = 0; i1 < actualLogList.Blocs.Length; i1++) 
+            actualLogList.Blocs[i1].ShouldBe(expectedLogList.Blocs[i1], $"i1 = {i1}");
     }
 }

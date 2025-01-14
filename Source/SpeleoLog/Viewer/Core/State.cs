@@ -5,17 +5,13 @@ public class State
     private readonly List<IEvent> _events = [];
     private PageRange _actualPage = PageRange.Empty;
     private readonly Cache _cache = new();
-    private readonly Paginator _paginator;
+    private readonly PaginatorV3 _paginator = new();
     private string _highlight = string.Empty;
 
     public IEvent[] Events => _events.ToArray();
     public int TotalLogsCount => _cache.TotalLogsCount;
     public int FilteredLogsCount => _cache.FilteredLogsCount;
     public bool IsSearchOn => _cache.IsSearchOn;
-
-    private State(int pageRange) => _paginator = new Paginator(pageRange);
-
-    public static State Initial(int pageRange) => new(pageRange);
 
     public State ClearEvents()
     {
@@ -35,22 +31,25 @@ public class State
                 DoMask(mask);
                 break;
             case Next:
-                GoNext();
+                MoveForward();
                 break;
             case GoToTop:
                 DoGoToTop();
                 break;
             case Previous:
-                GoPrevious();
+                MoveBackward();
                 break;
-            case Refresh refresh:
-                DoRefresh(refresh);
+            case AddRows refresh:
+                DoAddRows(refresh);
                 break;
             case SetErrorTag setErrorTag:
                 DoSetErrorTag(setErrorTag);
                 break;
             case Highlight highlight:
                 DoHighlight(highlight);
+                break;
+            case SetDisplayedRange setPageRange:
+                DoSetDisplayedRange(setPageRange);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(command));
@@ -59,12 +58,18 @@ public class State
         return this;
     }
 
+    private void DoSetDisplayedRange(SetDisplayedRange setDisplayedRange)
+    {
+        _paginator.SetDisplayedRange(setDisplayedRange.PageRange);
+        ResetDisplayedRows();
+    }
+
     private void DoHighlight(Highlight command)
     {
         if (command.HighlightText == _highlight) return;
         _highlight = command.HighlightText;
-        var blocs = BuildBlocs(_actualPage[..]);
-        _events.Add(new Updated(blocs));
+        var rows = BuildDisplayedRows(_actualPage[..]);
+        _events.Add(new AllReplaced(rows));
     }
 
     private void DoSetErrorTag(SetErrorTag setErrorTag)
@@ -75,17 +80,17 @@ public class State
         ResetDisplayedRows();
     }
 
-    private void GoPrevious()
+    private void MoveBackward()
     {
-        if (!_paginator.CanGoPrevious) return;
-        _paginator.Move(-50);
+        if (!_paginator.CanMoveBackward) return;
+        _paginator.MoveBackward();
         _events.AddRange(RefreshDisplayedRows());
     }
 
-    private void GoNext()
+    private void MoveForward()
     {
-        if (!_paginator.CanGoNext) return;
-        _paginator.Move(50);
+        if (!_paginator.CanMoveForward) return;
+        _paginator.MoveForward();
         _events.AddRange(RefreshDisplayedRows());
     }
 
@@ -105,9 +110,9 @@ public class State
         ResetDisplayedRows();
     }
 
-    private void DoRefresh(Refresh refresh)
+    private void DoAddRows(AddRows command)
     {
-        _cache.Push(refresh.Text);
+        _cache.Push(command.Rows);
 
         if (_cache.IsInitialized)
             _paginator.Push(_cache.LastAddedIndex.Count);
@@ -121,7 +126,7 @@ public class State
     {
         if (_actualPage.Size > 0)
         {
-            _events.Add(new DeletedAll());
+            _events.Add(new AllDeleted());
             _actualPage = PageRange.Empty;
         }
 
@@ -131,7 +136,7 @@ public class State
 
     private IEvent[] RefreshDisplayedRows()
     {
-        var newPage = _paginator.ActualPage;
+        var newPage = _paginator.CurrentPage;
         var events = _actualPage.Compare(newPage) switch
         {
             IsGoneBackward isGoneBackward => Map(isGoneBackward),
@@ -145,27 +150,24 @@ public class State
 
     private IEnumerable<IEvent> Map(IsGoneForward isGoneForward)
     {
-        var logRows = BuildBlocs(isGoneForward.AddedFomTop);
+        var logRows = BuildDisplayedRows(isGoneForward.AddedFomTop);
         if (logRows.Length != 0)
             yield return new AddedToTheTop(isGoneForward.DeleteFromBottom.Length,
-                isGoneForward.PageSize,
                 _paginator.IsOnLastPage,
                 logRows);
     }
 
     private IEnumerable<IEvent> Map(IsGoneBackward isGoneBackward)
     {
-        var logRows = BuildBlocs(isGoneBackward.AddedFomBottom);
+        var logRows = BuildDisplayedRows(isGoneBackward.AddedFomBottom);
         if (logRows.Length != 0)
-            yield return new AddedToTheBottom(isGoneBackward.DeleteFromTop.Length, isGoneBackward.PageSize, logRows);
+            yield return new AddedToTheBottom(isGoneBackward.DeleteFromTop.Length, logRows);
     }
 
-    private TextBlock[] BuildBlocs(int[] range) =>
+    private DisplayedRow[] BuildDisplayedRows(int[] range) =>
         _cache[range]
             .Reverse()
             .Select(row => row.SplitHighlightBloc(_highlight))
-            .SelectMany(GetBlocs)
-            .Group()
             .ToArray();
 
     private static IEnumerable<TextBlock> GetBlocs(DisplayedRow row)

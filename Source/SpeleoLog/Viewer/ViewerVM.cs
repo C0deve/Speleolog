@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.ObjectModel;
+using System.Diagnostics;
 using ReactiveUI.Fody.Helpers;
 
 namespace SpeleoLog.Viewer;
@@ -6,11 +7,11 @@ namespace SpeleoLog.Viewer;
 public sealed class ViewerVM : Document, IDisposable
 {
     private readonly CompositeDisposable _disposable = new();
-    private readonly BehaviorSubject<IEvent> _refresh = new(IEvent.Initial);
+    private readonly BehaviorSubject<IEvent> _eventStreamSubject = new(IEvent.Initial);
     private readonly TimeSpan _throttleTime = TimeSpan.FromMilliseconds(500);
     public TimeSpan AnimationDuration { get; } = TimeSpan.FromSeconds(10);
     public string FilePath { get; }
-    public IObservable<IEvent> RefreshStream { get; }
+    public IObservable<IEvent> EventStream { get; }
     [Reactive] public string Filter { get; set; }
     [Reactive] public string MaskText { get; set; }
     [Reactive] public string ErrorTag { get; set; }
@@ -21,26 +22,27 @@ public sealed class ViewerVM : Document, IDisposable
     public ReactiveCommand<Unit, Unit> GoToTop { get; }
     public ReactiveCommand<Unit, ICommand> PreviousPage { get; } = ReactiveCommand.Create<Unit, ICommand>(_ => new Previous());
     public ReactiveCommand<Unit, ICommand> NextPage { get; } = ReactiveCommand.Create<Unit, ICommand>(_ => new Next());
+    public ReactiveCommand<int, ICommand> SetDisplayedRowsCount { get; } = ReactiveCommand.Create<int, ICommand>(range => new SetDisplayedRange(range));
+    public ObservableCollection<string> ErrorMessages { get; } = [];
 
     public ViewerVM(
         string filePath,
         IObservable<Unit> fileChangedStream,
         IFileLoader fileLoader,
-        int lineCountByPage,
         string errorTag,
         IScheduler? scheduler = null)
     {
         ErrorTag = errorTag;
-        RefreshStream = _refresh.AsObservable().Where(message => message is not Initial);
-        var state = State.Initial(lineCountByPage);
+        EventStream = _eventStreamSubject.AsObservable().Where(message => message is not Initial);
         Filter = MaskText = HighlightText = string.Empty;
         FilePath = filePath;
         Title = Path.GetFileName(FilePath);
-        var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
-
         Load = ReactiveCommand.CreateFromTask(() => LoadFileContentAsync(filePath, fileLoader));
         GoToTop = ReactiveCommand.Create(() => { });
-        var sequencer = new Sequencer<IEvent[]>(Console.WriteLine);
+
+        var taskpoolScheduler = scheduler ?? RxApp.TaskpoolScheduler;
+        var state = new State();
+        var sequencer = new Sequencer<IEvent[]>(exception => ErrorMessages.Add(exception.Message));
 
         Observable.Merge(
                 NextPage.Is<ICommand>(),
@@ -49,8 +51,9 @@ public sealed class ViewerVM : Document, IDisposable
                 this.WhenAnyValue(vm => vm.MaskText, mask => new Mask(mask)).Skip(1).Throttle(_throttleTime, taskpoolScheduler).Is<ICommand>(),
                 this.WhenAnyValue(vm => vm.ErrorTag, tag => new SetErrorTag(tag)).Skip(1).Throttle(_throttleTime, taskpoolScheduler).Is<ICommand>(),
                 this.WhenAnyValue(vm => vm.HighlightText, text => new Highlight(text)).Skip(1).Throttle(_throttleTime, taskpoolScheduler).Is<ICommand>(),
-                Load.Select(text => new Refresh(text)).Is<ICommand>(),
-                GoToTop.Select(_ => new GoToTop()).Is<ICommand>()
+                Load.Select(text => new AddRows(text)).Is<ICommand>(),
+                GoToTop.Select(_ => new GoToTop()).Is<ICommand>(),
+                SetDisplayedRowsCount.Is<ICommand>()
             )
             .ObserveOn(taskpoolScheduler)
             .Do(command => sequencer.Enqueue(() =>
@@ -70,15 +73,12 @@ public sealed class ViewerVM : Document, IDisposable
             .Output
             .SelectMany(x => x)
             .Log(this)
-            .Subscribe(_refresh)
+            .Subscribe(_eventStreamSubject)
             .DisposeWith(_disposable);
 
         fileChangedStream
             .InvokeCommand(Load)
             .DisposeWith(_disposable);
-
-
-        Load.Execute().Subscribe();
     }
 
     private async Task<string[]> LoadFileContentAsync(string filePath, IFileLoader fileLoader)

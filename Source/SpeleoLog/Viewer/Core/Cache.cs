@@ -28,22 +28,14 @@ public class Cache
         Mask = mask;
         return this;
     }
-    
-    public Row[] this[IEnumerable<int> range] =>
-        range
-            .Where(i => i < _filteredIndex.Count)
-            .Select(i => _filteredIndex[i])
-            .Select(x => new Row(x, _logs[x], IsNewLine: IsInitialized && LastAddedIndex.Contains(x)))
-            .SetIsError(ErrorTag)
-            .MaskRows(Mask)
-            .ToArray();
 
+    public Row[] this[IEnumerable<int> range] =>
+        BuildRows(range
+            .Where(i => i < _filteredIndex.Count)
+            .Select(i => _filteredIndex[i]));
+    
     public Row[] this[Range range] =>
-        _filteredIndex[range]
-            .Select(x => new Row(x, _logs[x], IsNewLine: IsInitialized && LastAddedIndex.Contains(x)))
-            .SetIsError(ErrorTag)
-            .MaskRows(Mask)
-            .ToArray();
+        BuildRows( _filteredIndex[range]);
     
     public Cache Push(params string[] input)
     {
@@ -98,4 +90,11 @@ public class Cache
         row.Contains(search, StringComparison.InvariantCultureIgnoreCase);
 
     public void ClearLastAdded() => LastAddedIndex.Clear();
+    
+    private Row[] BuildRows(IEnumerable<int> index) =>
+        index
+            .Select(x => new Row(x, _logs[x], IsNewLine: IsInitialized && LastAddedIndex.Contains(x)))
+            .SetIsError(ErrorTag)
+            .MaskRows(Mask)
+            .ToArray();
 }

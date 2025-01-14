@@ -3,7 +3,7 @@ using SpeleoLog.Viewer.Core;
 
 namespace SpeleoLog.Test.V2;
 
-public class EndToStartPaginatorV2Should
+public class PaginatorShould
 {
     [Fact]
     public void ReturnEmptyOnCreation() =>

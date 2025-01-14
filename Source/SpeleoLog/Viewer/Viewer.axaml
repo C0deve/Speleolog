@@ -9,7 +9,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:viewer="clr-namespace:SpeleoLog.Viewer">
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="*,Auto,Auto">
         <Grid.Resources>
             <SolidColorBrush x:Key="JustAppendHighlight">#CAFFE7</SolidColorBrush>
             <SolidColorBrush x:Key="Error">OrangeRed</SolidColorBrush>
@@ -19,7 +19,8 @@
                 <Setter Property="Foreground" Value="DarkCyan" />
                 <Setter Property="SelectionBrush" Value="DarkSalmon" />
                 <Setter Property="SelectionForegroundBrush" Value="Indigo" />
-                <!-- <Setter Property="FontFamily" Value="Verdana" /> -->
+                <Setter Property="Margin" Value="0" />
+                <Setter Property="FontFamily" Value="Consolas" />
             </Style>
             <Style Selector="Run.Error">
                 <Setter Property="Foreground" Value="{StaticResource Error}" />
@@ -33,7 +34,7 @@
                 <Setter Property="Foreground" Value="Indigo" />
             </Style>
 
-            <Style Selector="Run.JustAdded">
+            <Style Selector="SelectableTextBlock.JustAdded">
                 <Style.Animations>
                     <!--  Fade out  -->
                     <Animation Duration="{Binding AnimationDuration}">
@@ -57,17 +58,20 @@
             Grid.Row="0"
             HorizontalScrollBarVisibility="Auto"
             x:Name="ScrollViewer">
-            <SelectableTextBlock Padding="0.5" x:Name="LogContent" FontFamily="Consolas"/>
+            <ItemsControl x:Name="LogsContainer" />
         </ScrollViewer>
 
+        <!-- Error messages -->
+        <ListBox Grid.Row="1" ItemsSource="{Binding ErrorMessages , Mode=OneTime}" />
+
         <!--  ToolBar  -->
-        <Grid ColumnDefinitions="Auto,Auto,Auto,0.45*,0.22*,0.22*,0.22*,0.1*" Grid.Row="1">
+        <Grid ColumnDefinitions="Auto,Auto,Auto,0.45*,0.22*,0.22*,0.22*,0.1*" Grid.Row="2">
+            <SelectableTextBlock Grid.Column="0" Text=" " VerticalAlignment="Center" x:Name="Test" ZIndex="-1" />
             <TextBlock
                 Grid.Column="0"
                 Margin="2"
                 TextWrapping="Wrap"
-                VerticalAlignment="Center"
-                >
+                VerticalAlignment="Center">
                 <Run Text="{Binding FilePath}" />
                 <Italic>
                     <Run Text="{Binding LogsCountDisplay}" />
