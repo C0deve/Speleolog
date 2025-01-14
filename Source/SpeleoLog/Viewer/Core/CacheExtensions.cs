@@ -15,7 +15,7 @@ internal static class CacheExtensions
             : row with { Text = row.Text.Remove(index, mask.Length) };
         return maskedRow;
     }
-    
+
     public static IEnumerable<Row> SetIsError(this IEnumerable<Row> actualRows, string errorTag) =>
         string.IsNullOrWhiteSpace(errorTag)
             ? actualRows

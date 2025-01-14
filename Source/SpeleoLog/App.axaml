@@ -4,7 +4,6 @@
     xmlns:idc="using:Dock.Avalonia.Controls"
     xmlns:acr="using:Avalonia.Controls.Recycling"
     xmlns="https://github.com/avaloniaui"
-    xmlns:local="using:SpeleoLog"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:speleoLog="clr-namespace:SpeleoLog">
     <!--  "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options.  -->

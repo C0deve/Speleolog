@@ -10,7 +10,6 @@
     x:DataType="main1:MainWindowVM"
     xmlns="https://github.com/avaloniaui"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:main="clr-namespace:SpeleoLog.Main"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:main1="clr-namespace:SpeleoLog.Main">
@@ -38,7 +37,7 @@
                 </MenuItem>
             </Menu>
         </StackPanel>
-        <ListBox DockPanel.Dock="Bottom" ItemsSource="{Binding ErrorMessages}" />
+        <ListBox DockPanel.Dock="Bottom" ItemsSource="{Binding ErrorMessages, Mode=OneTime}" />
         <DockControl Layout="{Binding Layout}" Margin="4" />
     </DockPanel>
 </Window>

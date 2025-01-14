@@ -159,7 +159,6 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
             filePath: path,
             fileChangedStream: _fileChangesObservableFactory.Build(path, _schedulerProvider.TaskpoolScheduler),
             _fileReaderFactory(),
-            100,
             "error",
             _schedulerProvider.TaskpoolScheduler);
 
