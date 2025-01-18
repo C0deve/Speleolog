@@ -42,8 +42,4 @@
       </None>
     </ItemGroup>
 
-    <ItemGroup>
-      <PackageVersion Update="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    </ItemGroup>
-
 </Project>
