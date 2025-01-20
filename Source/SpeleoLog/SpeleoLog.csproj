@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <Version>1.0.0</Version>
         <PublishSingleFile>true</PublishSingleFile>
@@ -27,22 +27,22 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia"/>
-        <PackageReference Include="Avalonia.Controls.ItemsRepeater"/>
-        <PackageReference Include="Avalonia.Desktop"/>
-        <PackageReference Include="Avalonia.Themes.Fluent"/>
-        <PackageReference Include="Avalonia.Fonts.Inter"/>
-        <PackageReference Include="Avalonia.Markup.Xaml.Loader"/>
+        <PackageReference Include="Avalonia" />
+        <PackageReference Include="Avalonia.Controls.ItemsRepeater" />
+        <PackageReference Include="Avalonia.Desktop" />
+        <PackageReference Include="Avalonia.Themes.Fluent" />
+        <PackageReference Include="Avalonia.Fonts.Inter" />
+        <PackageReference Include="Avalonia.Markup.Xaml.Loader" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics"/>
-        <PackageReference Include="Avalonia.ReactiveUI"/>
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" />
+        <PackageReference Include="Avalonia.ReactiveUI" />
         
         <!--Dock layout-->
-        <PackageReference Include="Dock.Avalonia"/>
-        <PackageReference Include="Dock.Model"/>
-        <PackageReference Include="Dock.Model.ReactiveUI"/>
-        <PackageReference Include="ReactiveMarbles.ObservableEvents.SourceGenerator"/>
-        <PackageReference Include="ReactiveUI.Fody"/>
+        <PackageReference Include="Dock.Avalonia" />
+        <PackageReference Include="Dock.Model" />
+        <PackageReference Include="Dock.Model.ReactiveUI" />
+        <PackageReference Include="ReactiveMarbles.ObservableEvents.SourceGenerator" />
+        <PackageReference Include="ReactiveUI.Fody" />
     </ItemGroup>
 
     <ItemGroup>
