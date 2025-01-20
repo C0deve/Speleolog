@@ -1,0 +1,61 @@
+﻿name: publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  PUBLISH_PATH: ${{ github.workspace }}/publish
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH: 'Source/SpeleoLog'
+
+jobs:
+  publish:
+   
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Get version from tag
+        id: tag_name
+        run: |
+          echo "current_version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get Changelog Entry
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          validation_level: warn
+          version: ${{ steps.tag_name.outputs.current_version }}
+          path: ./CHANGELOG.md
+        
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      - name: Dotnet publish
+        run: dotnet publish Source/SpeleoLog/SpeleoLog.csproj -r win-x64 -p:PublishSingleFile=true --self-contained true --output ${{ env.PUBLISH_PATH }}
+
+      - name: Zip files
+        run: zip -r Speleolog.zip *
+        working-directory: ${{ env.PUBLISH_PATH }}
+      
+      - name: Create/update release
+        uses: ncipollo/release-action@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+            tag: ${{ steps.changelog_reader.outputs.version }}
+            name: Release ${{ steps.changelog_reader.outputs.version }}
+            body: ${{ steps.changelog_reader.outputs.changes }}
+            prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
+            draft: ${{ steps.changelog_reader.outputs.status == 'unreleased' }}
+            artifacts: ${{ env.PUBLISH_PATH }}/Speleolog.zip
+            allowUpdates: true      
