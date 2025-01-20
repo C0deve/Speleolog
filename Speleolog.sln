@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34330.188
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeleoLog", "SpeleoLog\SpeleoLog.csproj", "{236CF7C1-0BA7-4932-AB2F-C8817F1633AB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeleoLog", "Source\SpeleoLog\SpeleoLog.csproj", "{236CF7C1-0BA7-4932-AB2F-C8817F1633AB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeleoLog.Console", "SpeleoLog.Console\SpeleoLog.Console.csproj", "{72A50333-63B7-4DE2-8BD0-CA2DF16F71C8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeleoLog.Console", "Source\SpeleoLog.Console\SpeleoLog.Console.csproj", "{72A50333-63B7-4DE2-8BD0-CA2DF16F71C8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeleoLog.Test", "SpeleoLog.Test\SpeleoLog.Test.csproj", "{252733BE-14C7-4A99-9A95-48ABCF161EB9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeleoLog.Test", "Source\SpeleoLog.Test\SpeleoLog.Test.csproj", "{252733BE-14C7-4A99-9A95-48ABCF161EB9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
