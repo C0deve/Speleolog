@@ -96,14 +96,13 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
 
     public void Drop(object? sender, DragEventArgs e)
     {
-        if (!e.Data.Contains(DataFormats.Files)) return;
-        var result = e.Data.GetFiles();
+        if (!e.DataTransfer.Formats.Contains(DataFormat.File)) return;
+        var result = e.DataTransfer.Items;
         e.Handled = true;
-        if (result is null) return;
-
+        
         _ = OpenFilesFromPathAsync(result
-            .Where(item => item is IStorageFile)
-            .Cast<IStorageFile>()
+            .Select(item => item.TryGetFile())
+            .IsNotNull()
             .Select(file => file.Path.LocalPath));
     }
 
@@ -182,7 +181,7 @@ public sealed class MainWindowVM : ReactiveObject, IDropTarget, IDisposable
 
     public void DragOver(object? sender, DragEventArgs e)
     {
-        if (e.Data.Contains(DataFormats.Files)) return;
+        if (e.DataTransfer.Contains(DataFormat.File)) return;
         e.DragEffects = DragDropEffects.None;
         e.Handled = true;
     }

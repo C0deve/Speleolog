@@ -1,11 +1,11 @@
 <Application
     RequestedThemeVariant="Light"
     x:Class="SpeleoLog.App"
-    xmlns:idc="using:Dock.Avalonia.Controls"
-    xmlns:acr="using:Avalonia.Controls.Recycling"
     xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:speleoLog="clr-namespace:SpeleoLog">
+    xmlns:acr="using:Avalonia.Controls.Recycling"
+    xmlns:idc="using:Dock.Avalonia.Controls"
+    xmlns:speleoLog="clr-namespace:SpeleoLog"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!--  "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options.  -->
 
     <Application.DataTemplates>
@@ -13,19 +13,18 @@
     </Application.DataTemplates>
 
     <Application.Resources>
-        <acr:ControlRecycling x:Key="ControlRecyclingKey" TryToUseIdAsKey="True" />
+        <acr:ControlRecycling TryToUseIdAsKey="True" x:Key="ControlRecyclingKey" />
         <!-- <FontFamily x:Key="NunitoFont">avares://GoogleFonts/Assets/Fonts#Nunito</FontFamily> -->
     </Application.Resources>
 
     <Application.Styles>
-        <FluentTheme/>
-        <StyleInclude Source="avares://Dock.Avalonia/Themes/DockFluentTheme.axaml" />
-        
+        <FluentTheme />
+        <DockFluentTheme />
 
         <Style Selector="idc|DockControl">
             <Setter Property="(acr:ControlRecyclingDataTemplate.ControlRecycling)" Value="{StaticResource ControlRecyclingKey}" />
         </Style>
-        
+
         <!-- <Style Selector="DocumentTabStripItem"> -->
         <!--     <Setter Property="Background" Value="Chartreuse" /> -->
         <!-- </Style> -->

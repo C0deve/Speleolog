@@ -72,4 +72,10 @@ public static class ReactiveExtensions
 
     public static IObservable<Unit> ToUnit<TSource>(this IObservable<TSource> source) =>
         source.Select(_ => Unit.Default);
+    
+    public static IEnumerable<TResult> IsNotNull<TResult>(
+        this IEnumerable<TResult?> source) =>
+        source
+            .Where(x => x is not null)
+            .Select(x => x!);
 }
