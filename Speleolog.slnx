@@ -1,0 +1,20 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="Source/SpeleoLog.Console/SpeleoLog.Console.csproj" />
+  <Project Path="Source/SpeleoLog.Test/SpeleoLog.Test.csproj" />
+  <Project Path="Source/SpeleoLog/SpeleoLog.csproj">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+    <File Path=".github/workflows/release.yml" />
+    <File Path="CHANGELOG.md" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="LICENSE" />
+    <File Path="Directory.Build.props" />
+  </Folder>
+</Solution>
